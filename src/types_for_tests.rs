@@ -109,17 +109,17 @@ pub struct Packed2<T>(pub T);
 pub struct Packed1<T>(pub T);
 
 #[repr(align(16))]
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Align16<T>(pub T);
 
 #[repr(align(8))]
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Align8<T>(pub T);
 
 #[repr(align(4))]
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Align4<T>(pub T);
 
 #[repr(align(2))]
-#[derive(Debug, Default)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Align2<T>(pub T);

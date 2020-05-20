@@ -16,3 +16,5 @@ test_nightly = ["testing","priv_raw_ref"]
 
 [dependencies]
 
+[build-dependencies]
+rustc_version = "0.2.3"

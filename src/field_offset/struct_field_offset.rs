@@ -16,8 +16,8 @@ use core::{
 ///
 /// - `F`: the type of the field this is an offset for.
 ///
-/// - `A`: Whether the field is aligned (represented with the `Aligned` marker type)
-/// or not (represented with the `Packed` marker type).
+/// - The `A` type parameter is [`Packed`]
+/// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
 /// This changes which methods are available,and the implementation of some of them.
 ///
 #[repr(transparent)]
@@ -58,8 +58,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
     /// - The `A` type parameter must be [`Packed`]
-    /// if the field of type `F` could be unaligned,
-    /// and [`Aligned`] if it is definitely aligned.
+    /// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
     ///
     /// [`Aligned`]: ./struct.Aligned.html
     /// [`Packed`]: ./struct.Packed.html
@@ -106,6 +105,13 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub fn get_raw(self, base: *const S) -> *const F {
         unsafe { (base as *const u8).offset(self.offset as isize) as *const F }
     }
+
+    /// Gets a mutable raw pointer to the field that this is an offset for.
+    #[inline(always)]
+    pub fn get_raw_mut(self, base: *mut S) -> *mut F {
+        unsafe { (base as *mut u8).offset(self.offset as isize) as *mut F }
+    }
+
     /// Copies the field that this is an offset for,from a potentially unaligned field.
     #[inline(always)]
     pub fn get_copy_unaligned(self, base: *const S) -> F
@@ -121,6 +127,12 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     #[inline(always)]
     pub fn get(self, base: &S) -> &F {
         unsafe { &*self.get_raw(base) }
+    }
+
+    /// Gets a mutable reference to the field that this is an offset for.
+    #[inline(always)]
+    pub fn get_mut(self, base: &mut S) -> &mut F {
+        unsafe { &mut *self.get_raw_mut(base) }
     }
 
     /// Copies the aligned field that this is an offset for.
@@ -141,5 +153,30 @@ impl<S, F> FieldOffset<S, F, Packed> {
         F: Copy,
     {
         unsafe { self.get_raw(base).read_unaligned() }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use crate::types_for_tests::StructPacked;
+
+    #[test]
+    fn test_constructor_offset() {
+        unsafe {
+            let field_0 = FieldOffset::<(u128,), u8, Aligned>::new(0);
+            let field_1 = field_0.next_field_offset::<u32>();
+            assert_eq!(field_0.offset(), 0);
+            assert_eq!(field_1.offset(), mem::align_of::<u32>());
+        }
+        unsafe {
+            let field_0 = FieldOffset::<StructPacked<u128, (), (), ()>, u8, Packed>::new(0);
+            let field_1 = field_0.next_field_offset::<u32>();
+            let field_2 = field_1.next_field_offset::<&'static str>();
+            assert_eq!(field_0.offset(), 0);
+            assert_eq!(field_1.offset(), 1);
+            assert_eq!(field_2.offset(), 5);
+        }
     }
 }

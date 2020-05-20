@@ -1,2 +1,6 @@
 /target
+**/*.rs.bk
 Cargo.lock
+repr_offset_crates.7z
+repr_offset_crates.zip
+*script.sh

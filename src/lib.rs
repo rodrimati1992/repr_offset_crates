@@ -11,4 +11,4 @@ mod test_macros;
 
 mod utils;
 
-pub use self::field_offset::{Aligned, FieldOffset, Unaligned};
+pub use self::field_offset::{Aligned, FieldOffset, Packed};

@@ -18,9 +18,10 @@ pub use self::struct_field_offset::FieldOffset;
 #[derive(Debug, Copy, Clone)]
 pub struct Aligned;
 
-/// A marker type representing that a type's fields are potentially unaligned.
+/// A marker type representing that a type has packed fields,
+/// which are potentially unaligned.
 #[derive(Debug, Copy, Clone)]
-pub struct Unaligned;
+pub struct Packed;
 
 /// Calculates the offset of a field,given the previous field.
 ///
@@ -61,17 +62,13 @@ pub struct GetNextFieldOffset {
 
 impl GetNextFieldOffset {
     /// Calculates the offset (in bytes) of a field.
-    pub const fn call(self) -> usize {
-        let Self {
-            previous_offset,
-            container_alignment,
-            size_of_previous,
-            align_of_next,
-        } = self;
-        let middle_offset = previous_offset + size_of_previous;
+    pub const fn call(&self) -> usize {
+        let middle_offset = self.previous_offset + self.size_of_previous;
         let padding = {
-            let alignment = utils::min_usize(align_of_next, container_alignment);
+            let alignment = utils::min_usize(self.align_of_next, self.container_alignment);
             let misalignment = middle_offset % alignment;
+
+            // Workaround for `if` in const contexts not being stable on Rust 1.34
             let mask = ((misalignment == 0) as usize).wrapping_sub(1);
             (alignment - misalignment) & mask
         };

@@ -1,4 +1,4 @@
-use crate::{Aligned, Unaligned};
+use crate::{Aligned, Packed};
 
 use core::{
     fmt::{self, Debug},
@@ -17,7 +17,7 @@ use core::{
 /// - `F`: the type of the field this is an offset for.
 ///
 /// - `A`: Whether the field is aligned (represented with the `Aligned` marker type)
-/// or not (represented with the `Unaligned` marker type).
+/// or not (represented with the `Packed` marker type).
 /// This changes which methods are available,and the implementation of some of them.
 ///
 #[repr(transparent)]
@@ -53,14 +53,16 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// Callers must ensure all of these:
     ///
+    /// - `S` must be a `#[repr(C)]` struct.
+    ///
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
-    /// - The `A` type parameter must be [`Unaligned`]
+    /// - The `A` type parameter must be [`Packed`]
     /// if the field of type `F` could be unaligned,
     /// and [`Aligned`] if it is definitely aligned.
     ///
     /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Packed`]: ./struct.Packed.html
     ///
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
@@ -77,8 +79,18 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Callers must ensure that `Next` is the type of the field after the one that
     /// this is an offset for.
     pub const unsafe fn next_field_offset<Next>(self) -> FieldOffset<S, Next, A> {
-        let offset = super::next_field_offset::<F, Next>(self.offset(), mem::align_of::<S>());
-        FieldOffset::new(offset)
+        let offset = super::GetNextFieldOffset {
+            previous_offset: self.offset,
+            container_alignment: mem::align_of::<S>(),
+            size_of_previous: mem::size_of::<F>(),
+            align_of_next: mem::align_of::<Next>(),
+        }
+        .call();
+
+        FieldOffset {
+            offset,
+            _marker: PhantomData,
+        }
     }
 }
 
@@ -121,7 +133,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     }
 }
 
-impl<S, F> FieldOffset<S, F, Unaligned> {
+impl<S, F> FieldOffset<S, F, Packed> {
     /// Copies the unaligned field that this is an offset for.
     #[inline(always)]
     pub fn get_copy(self, base: *const S) -> F

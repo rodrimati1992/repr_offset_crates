@@ -1,78 +1,69 @@
-/// Declares a sequence of (associated) constants with the offset of the listed fields.
+/// Declares a sequence of associated constants with the offset of the listed fields.
 ///
 /// # Parameters
 ///
-/// The `Self` parameter is the type that contains the fields,
-/// possibly a different type to the one that this declares (associated) constants for.
+/// The optional `Self` parameter overrides which struct the [`FieldOffset`] constants
+/// are an offset inside of.
 ///
-/// The `alignment` parameter can be either [`Aligned`] or [`Unaligned`],
+/// The `packing` parameter can be either [`Aligned`] or [`Packed`],
 /// and describes whether the fields are aligned or potentially unaligned,
 /// changing how the field is accessed in [`FieldOffset`] methods.
 ///
 ///
 /// [`Aligned`]: ./struct.Aligned.html
-/// [`Unaligned`]: ./struct.Unaligned.html
+/// [`Packed`]: ./struct.Packed.html
 /// [`FieldOffset`]: ./struct.FieldOffset.html
 #[macro_export]
 macro_rules! unsafe_offset_constants{
     (
-        Self = $Self:ty,
-        alignment = $alignment:ty,
-        associated_constants = $associated_constants:ident,
-        offsets = [
-            $($offset:ident : $field_ty:ty, )*
-            $(,)?
-        ]$(,)?
+        $( Self = $Self:ty, )?
+        packing = $packing:ty,
+
+        impl[ $($impl_params:tt)* ] $self:ty
+        $(where [ $($where:tt)* ])?
+        {
+            $( $vis:vis const $offset:ident : $field_ty:ty; )*
+        }
     )=>{
-        const INITIAL: $crate::FieldOffset<$Self,(),$alignment> = unsafe{ FieldOffset::new(0) };
-        $crate::unsafe_offset_constants!{
-            @inner
-            Self = $Self,
-            alignment = $alignment,
-            associated_constants = $associated_constants,
-            previous(INITIAL, $($offset,)*)
-            fields($($offset: $field_ty,)*)
+        impl<$($impl_params)*>  $self
+        $(where $($where)*)?
+        {
+            $crate::_priv_unsafe_offset_constants_inner!{
+                Self( $($Self,)? Self, )
+                packing = $packing,
+                previous($crate::FieldOffset::<_,(),_>::new(0), $(Self::$offset,)*)
+                offsets($($vis $offset: $field_ty;)*)
+            }
         }
     };
-    (@prev_offset true, $prev_offset:ident $(,)?)=>{
-        Self::$prev_offset
-    };
-    (@prev_offset false, $prev_offset:ident $(,)?)=>{
-        $prev_offset
-    };
-    (@inner
-        Self = $Self:ty,
-        alignment = $alignment:ty,
-        associated_constants = $associated_constants:ident,
-        previous( $prev_offset:ident, $($prev:tt)* )
-        fields(
-            $offset:ident : $field_ty:ty,
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _priv_unsafe_offset_constants_inner{
+    (
+        Self( $Self:ty, $($_ignored_Self:ty,)? )
+        packing = $packing:ty,
+        previous( $prev_offset:expr, $($prev:tt)* )
+        offsets(
+            $vis:vis $offset:ident : $field_ty:ty;
             $($next:tt)*
         )
     )=>{
-        const $offset: $crate::FieldOffset<$Self,$field_ty,$alignment> = unsafe{
-            $crate::FieldOffset::next_field_offset(
-                $crate::unsafe_offset_constants!(
-                    @prev_offset
-                    $associated_constants,
-                    $prev_offset,
-                )
-            )
+        $vis const $offset: $crate::FieldOffset<$Self,$field_ty,$packing> = unsafe{
+            $prev_offset.next_field_offset()
         };
-        $crate::unsafe_offset_constants!{
-            @inner
-            Self = $Self,
-            alignment = $alignment,
-            associated_constants = $associated_constants,
+        $crate::_priv_unsafe_offset_constants_inner!{
+            Self($Self,)
+            packing = $packing,
             previous($($prev)*)
-            fields($($next)*)
+            offsets($($next)*)
         }
     };
-    (@inner
-        Self = $Self:ty,
-        alignment = $alignment:ty,
-        associated_constants = $associated_constants:ident,
+    (
+        Self( $Self:ty, $($_ignored_Self:ty,)? )
+        packing = $packing:ty,
         previous($($prev:tt)*)
-        fields()
+        offsets()
     )=>{};
 }

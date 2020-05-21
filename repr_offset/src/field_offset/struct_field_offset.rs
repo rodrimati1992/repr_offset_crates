@@ -26,7 +26,7 @@ use core::{
 ///
 /// This example demonstrates how you can construct `FieldOffset` without macros.
 ///
-/// You can use the [`unsafe_offset_constants`] macro to construct the constants
+/// You can use the [`unsafe_struct_field_offsets`] macro to construct the constants
 /// more conveniently.
 ///
 /// ```rust
@@ -66,7 +66,7 @@ use core::{
 ///
 /// ```
 ///
-/// [`unsafe_offset_constants`]: ./macro.unsafe_offset_constants.html
+/// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 ///
 #[repr(transparent)]
 pub struct FieldOffset<S, F, A> {

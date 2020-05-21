@@ -15,14 +15,14 @@
 //! <span id="root-mod-examples"></span>
 //! # Examples
 //!
-//! ### Ìnitialization
+//! ### Initialization
 //!
 //! This example demonstrates how you can:
 //!
-//! - Use the `unsafe_struct_field_offsets` macro to declare associated constants with
+//! - Use the [`unsafe_struct_field_offsets`] macro to declare associated constants with
 //! the field offsets.
 //!
-//! - Initialize an uninitialized struct you get as a parameter.
+//! - Initialize an uninitialized struct by passing a pointer to it.
 //!
 //! This example only compiles since Rust 1.36 because it uses `MaybeUninit`.
 //!
@@ -48,7 +48,7 @@
 //! ///
 //! /// # Safety
 //! ///
-//! /// Callers must pass a pointer to a uninitialized memory with the
+//! /// Callers must pass a pointer to uninitialized memory with the
 //! /// size and alignment of `Foo`
 //! unsafe fn initialize_foo(this: *mut Foo){
 //!     Foo::OFFSET_NAME.get_raw_mut(this).write("foo".into());
@@ -65,7 +65,7 @@
 //! }
 //!
 //! // This macro is unsafe to invoke because you have to ensure that:
-//! // - All fields are listed,in declaration order.
+//! // - All field types are listed,in declaration order.
 //! // - The `packing` parameter is `Packed` if the struct is `#[repr(C,packed)]`,
 //! //   and `Aligned` if it's not.
 //! unsafe_struct_field_offsets!{
@@ -83,7 +83,7 @@
 //! ```
 //!
 //!
-//! [`unsafe_struct_field_offsets`]: ./macro.unsafe_offset_constants.html
+//! [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 //! [`FieldOffset`]: ./struct.FieldOffset.html
 //!
 #![no_std]

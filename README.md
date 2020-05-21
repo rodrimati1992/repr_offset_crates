@@ -32,14 +32,15 @@ This library is unconditionally `#![no_std]`,and that is unlikely to change in t
 
 # Minimum Rust version
 
-This crate support Rust back to 1.33.
+This crate support Rust back to 1.34.0
+(compiling the `repr_offset` tests on Rust 1.33.0 results in an internal compiler error).
 
 # License
 
 Licensed under the Zlib license
 
 [`unsafe_struct_field_offsets`]:
-https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_offset_constants.html
+https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_struct_field_offsets.html
 
 [`FieldOffset`]: 
 https://docs.rs/repr_offset/*/repr_offset/struct.FieldOffset.html

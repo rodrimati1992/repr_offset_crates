@@ -1,13 +1,22 @@
-/// Declares a sequence of associated constants with the offset of the listed fields.
+/// Declares a sequence of associated constants with the offsets of the listed fields.
+///
+/// # Safety
+///
+/// Callers must ensure that:
+///
+/// - All field types are listed,in declaration order.
+///
+/// - The `packing` parameter is [`Packed`] if the struct is `#[repr(C,packed)]`,
+/// and [`Aligned`] if it's not.
 ///
 /// # Parameters
 ///
 /// The optional `Self` parameter overrides which struct the [`FieldOffset`] constants
-/// are an offset inside of.
+/// (that this outputs) are an offset inside of.
 ///
 /// The `packing` parameter can be either [`Aligned`] or [`Packed`],
 /// and describes whether the fields are aligned or potentially unaligned,
-/// changing how the field is accessed in [`FieldOffset`] methods.
+/// changing how fields are accessed in [`FieldOffset`] methods.
 ///
 ///
 /// [`Aligned`]: ./struct.Aligned.html
@@ -16,10 +25,38 @@
 ///
 /// # Examples
 ///
+/// ### Syntax example
+///
+/// This demonstrates the macro being used with all of the syntax.
+///
+/// ```rust
+/// use repr_offset::{unsafe_struct_field_offsets, Aligned};
+///
+/// #[repr(C)]
+/// struct Bar<T: Copy, U>(T,U)
+/// where U: Clone;
+///
+/// unsafe_struct_field_offsets!{
+///     // Optional parameter.
+///     // Generic parameters from the impl block can be used here.
+///     Self = Bar<T, U>,
+///
+///     packing = Aligned,
+///
+///     impl[T: Copy, U] Bar<T, U>
+///     where[ U: Clone ]
+///     {
+///         pub const OFFSET_0: T;
+///         pub const OFFSET_1: U;
+///     }
+/// }
+///
+/// ```
+///
 /// ### Packed struct example
 ///
-/// This example demonstrates how you can get a pointer to a field from a pointer to
-/// a packed struct (it's UB to use references here).
+/// This demonstrates how you can get a pointer to a field from a pointer to
+/// a packed struct (it's UB to use references to fields here).
 ///
 /// ```rust
 /// use repr_offset::{unsafe_struct_field_offsets, Packed};

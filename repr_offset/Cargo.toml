@@ -15,6 +15,7 @@ include = [
     "src/**/*.rs", 
     "../README.md",
     "../LICENSE-ZLIB.md", 
+    "build.rs", 
 ]
 
 [badges]

@@ -1,4 +1,4 @@
-use crate::{Aligned, Packed};
+use crate::{offset_calc::GetNextFieldOffset, Aligned, Packed};
 
 use core::{
     fmt::{self, Debug},
@@ -94,6 +94,22 @@ impl<S, F, A> Clone for FieldOffset<S, F, A> {
     }
 }
 
+// Defined this macro to reduce the amount of instructions in debug builds
+// caused by delegating to `get_raw`
+macro_rules! get_raw_method {
+    ($self:ident, $base:expr, $F:ty) => {
+        (($base as *const _ as *const u8).offset($self.offset as isize) as *const $F)
+    };
+}
+
+// Defined this macro to reduce the amount of instructions in debug builds
+// caused by delegating to `get_raw_mut`
+macro_rules! get_raw_mut_method {
+    ($self:ident, $base:expr, $F:ty) => {
+        (($base as *mut _ as *mut u8).offset($self.offset as isize) as *mut $F)
+    };
+}
+
 impl<S, F, A> FieldOffset<S, F, A> {
     /// Constructs this `FieldOffset` from the offset of the field.
     ///
@@ -126,7 +142,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Callers must ensure that `Next` is the type of the field after the one that
     /// this is an offset for.
     pub const unsafe fn next_field_offset<Next>(self) -> FieldOffset<S, Next, A> {
-        let offset = super::GetNextFieldOffset {
+        let offset = GetNextFieldOffset {
             previous_offset: self.offset,
             container_alignment: mem::align_of::<S>(),
             size_of_previous: mem::size_of::<F>(),
@@ -151,13 +167,13 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Gets a raw pointer to the field that this is an offset for.
     #[inline(always)]
     pub fn get_raw(self, base: *const S) -> *const F {
-        unsafe { (base as *const u8).offset(self.offset as isize) as *const F }
+        unsafe { get_raw_method!(self, base, F) }
     }
 
     /// Gets a mutable raw pointer to the field that this is an offset for.
     #[inline(always)]
     pub fn get_raw_mut(self, base: *mut S) -> *mut F {
-        unsafe { (base as *mut u8).offset(self.offset as isize) as *mut F }
+        unsafe { get_raw_mut_method!(self, base, F) }
     }
 
     /// Copies the field that this is an offset for,from a potentially unaligned field.
@@ -166,7 +182,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     where
         F: Copy,
     {
-        unsafe { self.get_raw(base).read_unaligned() }
+        unsafe { get_raw_method!(self, base, F).read_unaligned() }
     }
 }
 
@@ -174,13 +190,13 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// Gets a reference to the field that this is an offset for.
     #[inline(always)]
     pub fn get(self, base: &S) -> &F {
-        unsafe { &*self.get_raw(base) }
+        unsafe { &*get_raw_method!(self, base, F) }
     }
 
     /// Gets a mutable reference to the field that this is an offset for.
     #[inline(always)]
     pub fn get_mut(self, base: &mut S) -> &mut F {
-        unsafe { &mut *self.get_raw_mut(base) }
+        unsafe { &mut *get_raw_mut_method!(self, base, F) }
     }
 
     /// Copies the aligned field that this is an offset for.
@@ -189,7 +205,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     where
         F: Copy,
     {
-        unsafe { *self.get_raw(base) }
+        unsafe { *get_raw_method!(self, base, F) }
     }
 }
 
@@ -200,7 +216,7 @@ impl<S, F> FieldOffset<S, F, Packed> {
     where
         F: Copy,
     {
-        unsafe { self.get_raw(base).read_unaligned() }
+        unsafe { get_raw_method!(self, base, F).read_unaligned() }
     }
 }
 

@@ -89,8 +89,9 @@
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
 
-#[doc(hidden)]
-pub mod field_offset;
+mod field_offset;
+
+pub mod offset_calc;
 
 #[macro_use]
 mod macros;

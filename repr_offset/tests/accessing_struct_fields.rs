@@ -90,3 +90,53 @@ fn access_unaligned() {
         },
     }
 }
+
+#[test]
+fn replace_struct_field() {
+    use repr_offset::{unsafe_struct_field_offsets, Packed};
+
+    let mut bar = Bar {
+        mugs: 3,
+        bottles: 5,
+        table: "wooden".to_string(),
+    };
+
+    assert_eq!(
+        replace_table(&mut bar, "metallic".to_string()),
+        "wooden".to_string()
+    );
+    assert_eq!(
+        replace_table(&mut bar, "granite".to_string()),
+        "metallic".to_string()
+    );
+    assert_eq!(
+        replace_table(&mut bar, "carbonite".to_string()),
+        "granite".to_string()
+    );
+
+    fn replace_table(this: &mut Bar, replacement: String) -> String {
+        let ptr = Bar::OFFSET_TABLE.get_raw_mut(this);
+        unsafe {
+            let taken = ptr.read_unaligned();
+            ptr.write_unaligned(replacement);
+            taken
+        }
+    }
+
+    #[repr(C, packed)]
+    struct Bar {
+        mugs: u32,
+        bottles: u16,
+        table: String,
+    }
+
+    unsafe_struct_field_offsets! {
+        packing = Packed,
+
+        impl[] Bar {
+            pub const OFFSET_MUGS: u32;
+            pub const OFFSET_BOTTLES: u16;
+            pub const OFFSET_TABLE: String;
+        }
+    }
+}

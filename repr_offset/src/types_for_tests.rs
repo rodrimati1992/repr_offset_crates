@@ -19,7 +19,7 @@ macro_rules! declare_struct {
         }
 
 
-        unsafe_offset_constants!{
+        unsafe_struct_field_offsets!{
             Self = $name<A,B,C,D>,
             packing = $packing,
             impl[A,B,C,D] $name<(),(A,B,C,D),(),()>

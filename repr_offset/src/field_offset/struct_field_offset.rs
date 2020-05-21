@@ -20,6 +20,54 @@ use core::{
 /// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
 /// This changes which methods are available,and the implementation of some of them.
 ///
+/// # Examples
+///
+/// ### No Macros
+///
+/// This example demonstrates how you can construct `FieldOffset` without macros.
+///
+/// You can use the [`unsafe_offset_constants`] macro to construct the constants
+/// more conveniently.
+///
+/// ```rust
+/// use repr_offset::{Aligned, FieldOffset};
+///
+/// use std::mem;
+///
+/// fn main(){
+///     let mut foo = Foo{ first: 3u16, second: 5, third: None };
+///
+///     *Foo::OFFSET_FIRST.get_mut(&mut foo) = 13;
+///     *Foo::OFFSET_SECOND.get_mut(&mut foo) = 21;
+///     *Foo::OFFSET_THIRD.get_mut(&mut foo) = Some(34);
+///
+///     assert_eq!( foo, Foo{ first: 13, second: 21, third: Some(34) } );
+/// }
+///
+///
+/// #[repr(C)]
+/// #[derive(Debug,PartialEq)]
+/// struct Foo<T>{
+///     first: T,
+///     second: u32,
+///     third: Option<T>,
+/// }
+///
+/// impl<T> Foo<T>{
+///     const OFFSET_FIRST: FieldOffset<Self, T, Aligned> = unsafe{ FieldOffset::new(0) };
+///
+///     const OFFSET_SECOND: FieldOffset<Self, u32, Aligned> = unsafe{
+///         Self::OFFSET_FIRST.next_field_offset()
+///     };
+///     const OFFSET_THIRD: FieldOffset<Self, Option<T>, Aligned> = unsafe{
+///         Self::OFFSET_SECOND.next_field_offset()
+///     };
+/// }
+///
+/// ```
+///
+/// [`unsafe_offset_constants`]: ./macro.unsafe_offset_constants.html
+///
 #[repr(transparent)]
 pub struct FieldOffset<S, F, A> {
     offset: usize,

@@ -11,7 +11,7 @@ Currently only `#[repr(C)]`/`#[repr(C,packed)]`/`#[repr(C,align)]` structs are s
 
 These are some of the features this library provides:
 
-- Computing the offsets of all the fields in a struct with the [`unsafe_offset_constants`] macro.
+- Computing the offsets of all the fields in a struct with the [`unsafe_struct_field_offsets`] macro.
 
 - Using the [`FieldOffset`] type (how offsets are represented),
 to get a pointer (or reference) to a field from a pointer to the struct.
@@ -24,7 +24,7 @@ For **examples** you can look at
 
 # Future plans
 
-Adding a derive macro that does what `unsafe_offset_constants` does.
+Adding a derive macro that does what `unsafe_struct_field_offsets` does.
 
 # no-std support
 
@@ -37,3 +37,14 @@ This crate support Rust back to 1.33.
 # License
 
 Licensed under the Zlib license
+
+[`unsafe_struct_field_offsets`]:
+https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_offset_constants.html
+
+[`FieldOffset`]: 
+https://docs.rs/repr_offset/*/repr_offset/struct.FieldOffset.html
+
+
+
+
+

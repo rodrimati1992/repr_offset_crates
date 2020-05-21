@@ -1,6 +1,16 @@
-//! For computing and using the offset of `#[repr(C)]` structs.
+//! `repr_offset` allows computing and safely using field offsets from types with a stable layout.
 //!
-//! Also supports structs with the `#[repr(packed)]` and `#[repr(align(...))]` attributes.
+//! Currently only `#[repr(C)]`/`#[repr(C,packed)]`/`#[repr(C,align)]` structs are supported.
+//!
+//! # Features
+//!
+//! These are some of the features this library provides:
+//!
+//! - Computing the offsets of all the fields in a struct with the
+//! [`unsafe_struct_field_offsets`] macro.
+//!
+//! - Using the [`FieldOffset`] type (how offsets are represented),
+//! to get a pointer (or reference) to a field from a pointer to the struct.
 //!
 //! <span id="root-mod-examples"></span>
 //! # Examples
@@ -9,7 +19,7 @@
 //!
 //! This example demonstrates how you can:
 //!
-//! - Use the `unsafe_offset_constants` macro to declare associated constants with
+//! - Use the `unsafe_struct_field_offsets` macro to declare associated constants with
 //! the field offsets.
 //!
 //! - Initialize an uninitialized struct you get as a parameter.
@@ -21,7 +31,7 @@
 //!
 //! use std::mem::MaybeUninit;
 //!
-//! use repr_offset::{unsafe_offset_constants, Aligned};
+//! use repr_offset::{unsafe_struct_field_offsets, Aligned};
 //!
 //! fn main(){
 //!     unsafe {
@@ -56,9 +66,9 @@
 //!
 //! // This macro is unsafe to invoke because you have to ensure that:
 //! // - All fields are listed,in declaration order.
-//! // - The `packing` parameter is `Packed` is the struct is `#[repr(C,packed)]`,
+//! // - The `packing` parameter is `Packed` if the struct is `#[repr(C,packed)]`,
 //! //   and `Aligned` if it's not.
-//! unsafe_offset_constants!{
+//! unsafe_struct_field_offsets!{
 //!     packing = Aligned,
 //!
 //!     impl[] Foo {
@@ -71,7 +81,11 @@
 //!
 //!
 //! ```
-
+//!
+//!
+//! [`unsafe_struct_field_offsets`]: ./macro.unsafe_offset_constants.html
+//! [`FieldOffset`]: ./struct.FieldOffset.html
+//!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
 

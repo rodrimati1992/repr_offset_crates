@@ -2,8 +2,7 @@
 //!
 //! Also supports structs with the `#[repr(packed)]` and `#[repr(align(...))]` attributes.
 //!
-//!
-//!
+//! <span id="root-mod-examples"></span>
 //! # Examples
 //!
 //! ### Ìnitialization

@@ -123,3 +123,7 @@ pub struct Align4<T>(pub T);
 #[repr(align(2))]
 #[derive(Debug, Copy, Clone, PartialEq, Default)]
 pub struct Align2<T>(pub T);
+
+#[repr(transparent)]
+#[derive(Debug, Copy, Clone, PartialEq, Default)]
+pub struct Transparent<T>(pub T);

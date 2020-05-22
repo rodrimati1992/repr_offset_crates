@@ -52,7 +52,7 @@ unsafe_struct_field_offsets! {
     Self = Foo,
     packing = Aligned,
     usize_offsets = false,
-    starting_offset = 100,
+    starting_offset = 96,
 
     impl[] OffsetConsts {
         pub const OFFSET_FOO: u8;
@@ -102,15 +102,15 @@ fn offsets_macro_params() {
     assert_eq!(Foo::OFFSET_BAZ.offset(), UsizeConsts::OFFSET_BAZ);
 
     assert_eq!(
-        UsizeConsts::OFFSET_FOO + 100,
+        UsizeConsts::OFFSET_FOO + 96,
         OffsetConsts::OFFSET_FOO.offset()
     );
     assert_eq!(
-        UsizeConsts::OFFSET_BAR + 100,
+        UsizeConsts::OFFSET_BAR + 96,
         OffsetConsts::OFFSET_BAR.offset()
     );
     assert_eq!(
-        UsizeConsts::OFFSET_BAZ + 100,
+        UsizeConsts::OFFSET_BAZ + 96,
         OffsetConsts::OFFSET_BAZ.offset()
     );
 

@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
-
 #[cfg(feature = "priv_raw_ref")]
 #[test]
 fn packed_struct_layouts() {

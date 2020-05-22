@@ -1,18 +1,16 @@
 //! Functions for calculating field offsets.
 
-use crate::utils;
-
-use core::mem;
+use crate::utils::{self, Mem};
 
 /// Calculates the offset of a field,given the previous field.
 ///
 /// # Parameters
 ///
-/// `Struct` is the struct that contains the field whose offset this calculates.
+/// `Struct` is the struct that contains the field that this calculates the offset for.
 ///
 /// `Prev` is the type of the previous field.
 ///
-/// `Next` is the type of the field whose offset this calculates.
+/// `Next` is the type of the field that this calculates the offset for.
 ///
 /// `previous_offset` is the offset in bytes of the previous field,of `Prev` type.
 ///
@@ -20,9 +18,9 @@ use core::mem;
 pub const fn next_field_offset<Struct, Prev, Next>(previous_offset: usize) -> usize {
     GetNextFieldOffset {
         previous_offset,
-        container_alignment: mem::align_of::<Struct>(),
-        size_of_previous: mem::size_of::<Prev>(),
-        align_of_next: mem::align_of::<Next>(),
+        previous_size: Mem::<Prev>::SIZE,
+        container_alignment: Mem::<Struct>::ALIGN,
+        next_alignment: Mem::<Next>::ALIGN,
     }
     .call()
 }
@@ -31,20 +29,20 @@ pub const fn next_field_offset<Struct, Prev, Next>(previous_offset: usize) -> us
 pub struct GetNextFieldOffset {
     /// The offset in bytes of the previous field.
     pub previous_offset: usize,
+    /// The size of the previous field.
+    pub previous_size: usize,
     /// The alignment of the type that contains the field.
     pub container_alignment: usize,
-    /// the size of the previous field.
-    pub size_of_previous: usize,
-    /// The alignment of the field.
-    pub align_of_next: usize,
+    /// The alignment of the field that this calculates the offset for.
+    pub next_alignment: usize,
 }
 
 impl GetNextFieldOffset {
     /// Calculates the offset (in bytes) of a field.
-    pub const fn call(&self) -> usize {
-        let middle_offset = self.previous_offset + self.size_of_previous;
+    pub const fn call(self) -> usize {
+        let middle_offset = self.previous_offset + self.previous_size;
         let padding = {
-            let alignment = utils::min_usize(self.align_of_next, self.container_alignment);
+            let alignment = utils::min_usize(self.next_alignment, self.container_alignment);
             let misalignment = middle_offset % alignment;
 
             // Workaround for `if` in const contexts not being stable on Rust 1.34

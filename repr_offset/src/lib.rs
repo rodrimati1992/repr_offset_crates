@@ -89,12 +89,15 @@
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
 
-mod field_offset;
-
-pub mod offset_calc;
+#[macro_use]
+mod internal_macros;
 
 #[macro_use]
 mod macros;
+
+mod field_offset;
+
+pub mod offset_calc;
 
 #[cfg(feature = "testing")]
 #[macro_use]

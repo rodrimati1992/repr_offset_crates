@@ -77,6 +77,10 @@ pub struct FieldOffset<S, F, A> {
 // Workaround for `PhantomData<fn()->T>` not being constructible in const contexts
 struct DummyType<T>(fn() -> T);
 
+impl_cmp_traits_for_offset! {
+    impl[S, F, A] FieldOffset<S, F, A>
+}
+
 impl<S, F, A> Debug for FieldOffset<S, F, A> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("FieldOffset")

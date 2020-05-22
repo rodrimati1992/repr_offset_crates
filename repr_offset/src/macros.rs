@@ -4,6 +4,8 @@
 ///
 /// Callers must ensure that:
 ///
+/// - The type that the offsets are for is a `#[repr(C)]` struct.
+///
 /// - All field types are listed,in declaration order.
 ///
 /// - The `packing` parameter is [`Packed`] if the struct is `#[repr(C,packed)]`,
@@ -11,13 +13,33 @@
 ///
 /// # Parameters
 ///
+/// ### `Self`
+///
 /// The optional `Self` parameter overrides which struct the [`FieldOffset`] constants
 /// (that this outputs) are an offset inside of.
+///
+/// ### `packing`
 ///
 /// The `packing` parameter can be either [`Aligned`] or [`Packed`],
 /// and describes whether the fields are aligned or potentially unaligned,
 /// changing how fields are accessed in [`FieldOffset`] methods.
 ///
+/// ### `usize_offsets`
+///
+/// The optional `usize_offsets` parameter determines whether type of the
+/// generated constants is [`FieldOffset`] or `usize`.<br>
+///
+/// The valid values for this parameter are:
+/// - (not passing this parameter): The constants are [`FieldOffset`]s.
+/// - `false`: The constants are [`FieldOffset`]s.
+/// - `true`: The constants are `usize`s.
+///
+/// ### `starting_offset`
+///
+/// The optional `starting_offset` parameter adds an offset to all the generated
+/// offset constants.
+///
+/// When this parameter is not passed, it defaults to `0`.
 ///
 /// [`Aligned`]: ./struct.Aligned.html
 /// [`Packed`]: ./struct.Packed.html
@@ -42,6 +64,12 @@
 ///     Self = Bar<T, U>,
 ///
 ///     packing = Aligned,
+///
+///     // Optional parameter.
+///     usize_offsets = false,
+///
+///     // Optional parameter
+///     starting_offset = 0,
 ///
 ///     impl[T: Copy, U] Bar<T, U>
 ///     where[ U: Clone ]
@@ -102,21 +130,44 @@ macro_rules! unsafe_struct_field_offsets{
     (
         $( Self = $Self:ty, )?
         packing = $packing:ty,
+        $( usize_offsets = $usize_offsets:ident,)?
+        $( starting_offset = $starting_offset:expr,)?
 
+        $(#[$impl_attr:meta])*
         impl[ $($impl_params:tt)* ] $self:ty
         $(where [ $($where:tt)* ])?
         {
-            $( $vis:vis const $offset:ident : $field_ty:ty; )*
+            $(
+                $(#[$const_attr:meta])*
+                $vis:vis const $offset:ident : $field_ty:ty;
+            )*
         }
     )=>{
+        $(#[$impl_attr])*
         impl<$($impl_params)*>  $self
         $(where $($where)*)?
         {
-            $crate::_priv_unsafe_struct_field_offsets_inner!{
-                Self( $($Self,)? Self, )
-                packing = $packing,
-                previous($crate::FieldOffset::<_,(),_>::new(0), $(Self::$offset,)*)
-                offsets($($vis $offset: $field_ty;)*)
+            $crate::_priv_usfoi!{
+                @setup
+                params(
+                    Self( $($Self,)? Self, )
+                    packing = $packing,
+                    usize_offsets($($usize_offsets,)? false,)
+                )
+                previous(
+                    (
+                        $crate::_priv_usfoi!(
+                            @initial
+                            $($usize_offsets)?, (0 $( + $starting_offset)? ),
+                        ),
+                        ()
+                    ),
+                    $((Self::$offset, $field_ty),)*
+                )
+                offsets($(
+                    $(#[$const_attr])*
+                    $vis $offset: $field_ty;
+                )*)
             }
         }
     };
@@ -124,29 +175,73 @@ macro_rules! unsafe_struct_field_offsets{
 
 #[doc(hidden)]
 #[macro_export]
-macro_rules! _priv_unsafe_struct_field_offsets_inner{
+macro_rules! _priv_usfoi{
+    (@setup
+        params $params:tt
+        previous( $($prev:tt)* )
+        offsets( $($offsets:tt)* )
+    )=>{
+        $crate::_priv_usfoi!{
+            params $params
+            params $params
+            previous( $($prev)* )
+            offsets( $($offsets)* )
+        }
+    };
+    (@initial true, $value:expr, )=>{
+        $value
+    };
+    (@initial $(false)?, $value:expr, )=>{
+        $crate::FieldOffset::<_,(),_>::new($value)
+    };
+    (@ty true, $Self:ty, $next_ty:ty, $packing:ty )=>{
+        usize
+    };
+    (@ty false, $Self:ty, $next_ty:ty, $packing:ty )=>{
+        $crate::FieldOffset<$Self,$next_ty,$packing>
+    };
+    (@val true, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
+        $crate::offset_calc::next_field_offset::<$Self, $prev_ty, $next_ty>( $prev )
+    };
+    (@val false, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
+        $prev.next_field_offset()
+    };
     (
-        Self( $Self:ty, $($_ignored_Self:ty,)? )
-        packing = $packing:ty,
-        previous( $prev_offset:expr, $($prev:tt)* )
+        params $params:tt
+        params(
+            Self( $Self:ty, $($_ignored_Self:ty,)? )
+            packing = $packing:ty,
+            usize_offsets($usize_offsets:ident, $($_ignored_io:ident,)? )
+        )
+        previous( ($prev_offset:expr, $prev_ty:ty), $($prev:tt)* )
         offsets(
+            $(#[$const_attr:meta])*
             $vis:vis $offset:ident : $field_ty:ty;
             $($next:tt)*
         )
     )=>{
-        $vis const $offset: $crate::FieldOffset<$Self,$field_ty,$packing> = unsafe{
-            $prev_offset.next_field_offset()
+        $(#[$const_attr])*
+        $vis const $offset:
+            $crate::_priv_usfoi!(
+                @ty $usize_offsets, $Self, $field_ty, $packing
+            )
+        = unsafe{
+            $crate::_priv_usfoi!(
+                @val
+                $usize_offsets, $Self, $prev_offset, $prev_ty, $field_ty
+            )
         };
-        $crate::_priv_unsafe_struct_field_offsets_inner!{
-            Self($Self,)
-            packing = $packing,
+
+        $crate::_priv_usfoi!{
+            params $params
+            params $params
             previous($($prev)*)
             offsets($($next)*)
         }
     };
     (
-        Self( $Self:ty, $($_ignored_Self:ty,)? )
-        packing = $packing:ty,
+        params $params:tt
+        params $params2:tt
         previous($($prev:tt)*)
         offsets()
     )=>{};

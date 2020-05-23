@@ -13,7 +13,7 @@ pub struct OffsetConsts;
 pub struct AttributeConsts;
 
 unsafe_struct_field_offsets! {
-    packing = Aligned,
+    alignment =  Aligned,
 
     impl[] Foo{
         pub const OFFSET_FOO: u8;
@@ -24,7 +24,7 @@ unsafe_struct_field_offsets! {
 
 unsafe_struct_field_offsets! {
     Self = Foo,
-    packing = Aligned,
+    alignment =  Aligned,
     usize_offsets = false,
     starting_offset = 0,
 
@@ -37,7 +37,7 @@ unsafe_struct_field_offsets! {
 
 unsafe_struct_field_offsets! {
     Self = Foo,
-    packing = Aligned,
+    alignment =  Aligned,
     usize_offsets = true,
     starting_offset = 0,
 
@@ -50,7 +50,7 @@ unsafe_struct_field_offsets! {
 
 unsafe_struct_field_offsets! {
     Self = Foo,
-    packing = Aligned,
+    alignment =  Aligned,
     usize_offsets = false,
     starting_offset = 96,
 
@@ -63,7 +63,7 @@ unsafe_struct_field_offsets! {
 
 unsafe_struct_field_offsets! {
     Self = Foo,
-    packing = Aligned,
+    alignment =  Aligned,
 
     #[cfg(FALSE)]
     impl[] AttributeConsts {
@@ -75,7 +75,7 @@ unsafe_struct_field_offsets! {
 
 unsafe_struct_field_offsets! {
     Self = Foo,
-    packing = Aligned,
+    alignment =  Aligned,
 
     impl[] AttributeConsts {
         pub const OFFSET_FOO: u8;

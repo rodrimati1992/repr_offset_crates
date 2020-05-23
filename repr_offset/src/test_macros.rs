@@ -5,9 +5,9 @@ mod for_permutations;
 #[doc(hidden)]
 #[macro_export]
 macro_rules! _priv_offset_of {
-    ( $instance:ident, $field:tt, $packing:ident ) => {
+    ( $instance:ident, $field:tt, $alignment:ident ) => {
         unsafe {
-            let field_ptr = $crate::_priv_address_of!($packing, $instance.$field);
+            let field_ptr = $crate::_priv_address_of!($alignment, $instance.$field);
             let struct_ptr = $crate::_priv_address_of!(aligned, $instance);
             field_ptr - struct_ptr
         }

@@ -2,12 +2,12 @@
 #[macro_export]
 macro_rules! _priv_for_permutations_test {
     (
-        packing = $p:ident,
+        alignment =  $p:ident,
         struct $struct:ident;
     ) => {
         $crate::_priv_for_permutations_test!{
             @struct
-            packing = $p,
+            alignment =  $p,
             struct $struct;
 
             type_params(
@@ -23,7 +23,7 @@ macro_rules! _priv_for_permutations_test {
         }
     };
     (@struct
-        packing = $p:ident,
+        alignment =  $p:ident,
         struct $struct:ident;
         type_params(
             $($type_params:tt)*

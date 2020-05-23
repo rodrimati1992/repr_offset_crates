@@ -1,10 +1,10 @@
-use crate::{Aligned, Packed};
+use crate::{Aligned, Unaligned};
 
 macro_rules! declare_struct {
     (
         $(#[$meta:meta])*
         struct $name:ident;
-        packing = $packing:ty,
+        alignment =  $alignment:ty,
     ) => {
         $(#[$meta])*
         #[derive(Default)]
@@ -21,7 +21,7 @@ macro_rules! declare_struct {
 
         unsafe_struct_field_offsets!{
             Self = $name<A,B,C,D>,
-            packing = $packing,
+            alignment =  $alignment,
             impl[A,B,C,D] $name<(),(A,B,C,D),(),()>
             where [ A: Default, ]
             {
@@ -37,55 +37,55 @@ macro_rules! declare_struct {
 declare_struct! {
     #[repr(C)]
     struct StructReprC;
-    packing = Aligned,
+    alignment =  Aligned,
 }
 
 declare_struct! {
     #[repr(C,packed)]
     struct StructPacked;
-    packing = Packed,
+    alignment =  Unaligned,
 }
 
 declare_struct! {
     #[repr(C,packed(2))]
     struct StructPacked2;
-    packing = Packed,
+    alignment =  Unaligned,
 }
 
 declare_struct! {
     #[repr(C,packed(4))]
     struct StructPacked4;
-    packing = Packed,
+    alignment =  Unaligned,
 }
 
 declare_struct! {
     #[repr(C,packed(8))]
     struct StructPacked8;
-    packing = Packed,
+    alignment =  Unaligned,
 }
 
 declare_struct! {
     #[repr(C,packed(16))]
     struct StructPacked16;
-    packing = Packed,
+    alignment =  Unaligned,
 }
 
 declare_struct! {
     #[repr(C,align(2))]
     struct StructAlign2;
-    packing = Aligned,
+    alignment =  Aligned,
 }
 
 declare_struct! {
     #[repr(C,align(4))]
     struct StructAlign4;
-    packing = Aligned,
+    alignment =  Aligned,
 }
 
 declare_struct! {
     #[repr(C,align(8))]
     struct StructAlign8;
-    packing = Aligned,
+    alignment =  Aligned,
 }
 
 #[repr(C, packed(16))]

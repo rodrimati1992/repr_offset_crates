@@ -8,7 +8,7 @@
 ///
 /// - All field types are listed,in declaration order.
 ///
-/// - The `packing` parameter is [`Packed`] if the struct is `#[repr(C,packed)]`,
+/// - The `alignment` parameter is [`Unaligned`] if the struct is `#[repr(C,packed)]`,
 /// and [`Aligned`] if it's not.
 ///
 /// # Parameters
@@ -18,9 +18,9 @@
 /// The optional `Self` parameter overrides which struct the [`FieldOffset`] constants
 /// (that this outputs) are an offset inside of.
 ///
-/// ### `packing`
+/// ### `alignment`
 ///
-/// The `packing` parameter can be either [`Aligned`] or [`Packed`],
+/// The `alignment` parameter can be either [`Aligned`] or [`Unaligned`],
 /// and describes whether the fields are aligned or potentially unaligned,
 /// changing how fields are accessed in [`FieldOffset`] methods.
 ///
@@ -42,7 +42,7 @@
 /// When this parameter is not passed, it defaults to `0`.
 ///
 /// [`Aligned`]: ./struct.Aligned.html
-/// [`Packed`]: ./struct.Packed.html
+/// [`Unaligned`]: ./struct.Unaligned.html
 /// [`FieldOffset`]: ./struct.FieldOffset.html
 ///
 /// # Examples
@@ -63,7 +63,7 @@
 ///     // Generic parameters from the impl block can be used here.
 ///     Self = Bar<T, U>,
 ///
-///     packing = Aligned,
+///     alignment =  Aligned,
 ///
 ///     // Optional parameter.
 ///     usize_offsets = false,
@@ -81,13 +81,13 @@
 ///
 /// ```
 ///
-/// ### Packed struct example
+/// ### Unaligned struct example
 ///
 /// This demonstrates how you can get a pointer to a field from a pointer to
 /// a packed struct (it's UB to use references to fields here).
 ///
 /// ```rust
-/// use repr_offset::{unsafe_struct_field_offsets, Packed};
+/// use repr_offset::{unsafe_struct_field_offsets, Unaligned};
 ///
 /// let mut bar = Bar{ mugs: 3, bottles: 5, table: "wooden".to_string() };
 ///
@@ -113,7 +113,7 @@
 /// }
 ///
 /// unsafe_struct_field_offsets!{
-///     packing = Packed,
+///     alignment =  Unaligned,
 ///
 ///     impl[] Bar {
 ///         pub const OFFSET_MUGS: u32;
@@ -129,7 +129,7 @@
 macro_rules! unsafe_struct_field_offsets{
     (
         $( Self = $Self:ty, )?
-        packing = $packing:ty,
+        alignment =  $alignment:ty,
         $( usize_offsets = $usize_offsets:ident,)?
         $( starting_offset = $starting_offset:expr,)?
 
@@ -151,7 +151,7 @@ macro_rules! unsafe_struct_field_offsets{
                 @setup
                 params(
                     Self( $($Self,)? Self, )
-                    packing = $packing,
+                    alignment =  $alignment,
                     usize_offsets($($usize_offsets,)? false,)
                 )
                 previous(
@@ -194,11 +194,11 @@ macro_rules! _priv_usfoi{
     (@initial $(false)?, $value:expr, )=>{
         $crate::FieldOffset::<_,(),_>::new($value)
     };
-    (@ty true, $Self:ty, $next_ty:ty, $packing:ty )=>{
+    (@ty true, $Self:ty, $next_ty:ty, $alignment:ty )=>{
         usize
     };
-    (@ty false, $Self:ty, $next_ty:ty, $packing:ty )=>{
-        $crate::FieldOffset<$Self,$next_ty,$packing>
+    (@ty false, $Self:ty, $next_ty:ty, $alignment:ty )=>{
+        $crate::FieldOffset<$Self,$next_ty,$alignment>
     };
     (@val true, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
         $crate::offset_calc::next_field_offset::<$Self, $prev_ty, $next_ty>( $prev )
@@ -210,7 +210,7 @@ macro_rules! _priv_usfoi{
         params $params:tt
         params(
             Self( $Self:ty, $($_ignored_Self:ty,)? )
-            packing = $packing:ty,
+            alignment =  $alignment:ty,
             usize_offsets($usize_offsets:ident, $($_ignored_io:ident,)? )
         )
         previous( ($prev_offset:expr, $prev_ty:ty), $($prev:tt)* )
@@ -223,7 +223,7 @@ macro_rules! _priv_usfoi{
         $(#[$const_attr])*
         $vis const $offset:
             $crate::_priv_usfoi!(
-                @ty $usize_offsets, $Self, $field_ty, $packing
+                @ty $usize_offsets, $Self, $field_ty, $alignment
             )
         = unsafe{
             $crate::_priv_usfoi!(

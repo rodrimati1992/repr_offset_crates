@@ -1,8 +1,12 @@
-use crate::{offset_calc::GetNextFieldOffset, utils::Mem, Aligned, Packed};
+use crate::{
+    offset_calc::GetNextFieldOffset, utils::Mem, Aligned, Alignment, CombinePacking,
+    CombinePackingOut, Unaligned,
+};
 
 use core::{
     fmt::{self, Debug},
     marker::PhantomData,
+    ops::Add,
 };
 
 /// Represents the offset of a field inside a type.
@@ -11,12 +15,12 @@ use core::{
 ///
 /// The type parameters are:
 ///
-/// - `S`: the struct that contains the field that this is an offset for.
+/// - `S`(for `struct`): the struct that contains the field that this is an offset for.
 ///
-/// - `F`: the type of the field this is an offset for.
+/// - `F`(for field): the type of the field this is an offset for.
 ///
-/// - The `A` type parameter is [`Packed`]
-/// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
+/// - `A`(for alignment):
+/// Is [`Aligned`] if this offset is aligned for the `F` type, [`Unaligned`] if it's not.
 /// This changes which methods are available,and the implementation of some of them.
 ///
 /// # Examples
@@ -124,14 +128,23 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
-    /// - The `A` type parameter must be [`Packed`]
+    /// - The `A` type parameter must be [`Unaligned`]
     /// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
     ///
     /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Packed`]: ./struct.Packed.html
+    /// [`Unaligned`]: ./struct.Unaligned.html
     ///
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
+        Self {
+            offset,
+            _marker: PhantomData,
+        }
+    }
+
+    // This must be kept private
+    #[inline(always)]
+    const fn priv_new(offset: usize) -> Self {
         Self {
             offset,
             _marker: PhantomData,
@@ -157,6 +170,40 @@ impl<S, F, A> FieldOffset<S, F, A> {
             offset,
             _marker: PhantomData,
         }
+    }
+}
+
+impl<S, F> FieldOffset<S, F, Aligned> {
+    /// Combines this `FieldOffset` with another one, to access a nested field.
+    ///
+    /// Note that the resulting `FieldOffset` has the
+    /// alignment type parameter (the third one) of `other`.
+    #[inline(always)]
+    pub const fn add<F2, A2>(self, other: FieldOffset<F, F2, A2>) -> FieldOffset<S, F2, A2> {
+        FieldOffset::priv_new(self.offset + other.offset)
+    }
+}
+
+impl<S, F> FieldOffset<S, F, Unaligned> {
+    /// Combines this `FieldOffset` with another one, to access a nested field.
+    #[inline(always)]
+    pub const fn add<F2, A2>(self, other: FieldOffset<F, F2, A2>) -> FieldOffset<S, F2, Unaligned> {
+        FieldOffset::priv_new(self.offset + other.offset)
+    }
+}
+
+/// Equivalent to the inherent `FieldOffset::add` method,
+/// which can be ran at compile-time.
+impl<S, F, A, F2, A2> Add<FieldOffset<F, F2, A2>> for FieldOffset<S, F, A>
+where
+    A: CombinePacking<A2>,
+    A2: Alignment,
+{
+    type Output = FieldOffset<S, F2, CombinePackingOut<A, A2>>;
+
+    #[inline(always)]
+    fn add(self, other: FieldOffset<F, F2, A2>) -> Self::Output {
+        FieldOffset::priv_new(self.offset + other.offset)
     }
 }
 
@@ -187,9 +234,9 @@ impl<S, F, A> FieldOffset<S, F, A> {
         FieldOffset::new(self.offset)
     }
 
-    /// Changes this `FieldOffset` to be for a packed (potentially unaligned) field.
+    /// Changes this `FieldOffset` to be for a (potentially) unaligned field.
     ///
-    pub const fn cast_packed(self) -> FieldOffset<S, F, Packed> {
+    pub const fn cast_unaligned(self) -> FieldOffset<S, F, Unaligned> {
         FieldOffset {
             offset: self.offset,
             _marker: PhantomData,
@@ -215,15 +262,6 @@ impl<S, F, A> FieldOffset<S, F, A> {
     #[inline(always)]
     pub fn get_raw_mut(self, base: *mut S) -> *mut F {
         unsafe { get_raw_mut_method!(self, base, F) }
-    }
-
-    /// Copies the field that this is an offset for,from a potentially unaligned field.
-    #[inline(always)]
-    pub fn get_copy_unaligned(self, base: *const S) -> F
-    where
-        F: Copy,
-    {
-        unsafe { get_raw_method!(self, base, F).read_unaligned() }
     }
 }
 
@@ -305,7 +343,7 @@ macro_rules! replace_unaligned {
     }};
 }
 
-impl<S, F> FieldOffset<S, F, Packed> {
+impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Copies the unaligned field that this is an offset for.
     #[inline(always)]
     pub fn get_copy(self, base: *const S) -> F
@@ -378,7 +416,7 @@ mod tests {
             assert_eq!(field_1.offset(), mem::align_of::<u32>());
         }
         unsafe {
-            let field_0 = FieldOffset::<StructPacked<u128, (), (), ()>, u8, Packed>::new(0);
+            let field_0 = FieldOffset::<StructPacked<u128, (), (), ()>, u8, Unaligned>::new(0);
             let field_1 = field_0.next_field_offset::<u32>();
             let field_2 = field_1.next_field_offset::<&'static str>();
             assert_eq!(field_0.offset(), 0);

@@ -66,10 +66,10 @@
 //!
 //! // This macro is unsafe to invoke because you have to ensure that:
 //! // - All field types are listed,in declaration order.
-//! // - The `packing` parameter is `Packed` if the struct is `#[repr(C,packed)]`,
+//! // - The `alignment` parameter is `Unaligned` if the struct is `#[repr(C,packed)]`,
 //! //   and `Aligned` if it's not.
 //! unsafe_struct_field_offsets!{
-//!     packing = Aligned,
+//!     alignment =  Aligned,
 //!
 //!     impl[] Foo {
 //!         pub const OFFSET_NAME:String;
@@ -95,13 +95,15 @@ mod internal_macros;
 #[macro_use]
 mod macros;
 
-mod field_offset;
-
-pub mod offset_calc;
-
 #[cfg(feature = "testing")]
 #[macro_use]
 mod test_macros;
+
+pub mod offset_calc;
+
+mod alignment;
+
+mod struct_field_offset;
 
 mod utils;
 
@@ -112,7 +114,10 @@ pub mod tests;
 #[cfg(feature = "testing")]
 pub mod types_for_tests;
 
-pub use self::field_offset::{Aligned, FieldOffset, Packed};
+pub use self::{
+    alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
+    struct_field_offset::FieldOffset,
+};
 
 #[cfg(all(test, not(feature = "testing")))]
 compile_error! { "tests must be run with the \"testing\" feature" }

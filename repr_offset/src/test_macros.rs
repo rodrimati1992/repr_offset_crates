@@ -106,3 +106,67 @@ macro_rules! _priv_run_with_types {
         })*
     };
 }
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _priv_swap_tests {
+    (
+        $offset:expr,
+        variables($var0:ident, $var1:ident)
+        values($val0:expr, $val1:expr)
+    ) => {{
+        assert_eq!($offset.get_copy(&$var0), $val0);
+        assert_eq!($offset.get_copy(&$var1), $val1);
+
+        // Testing the identity swap
+        {
+            let ptr: *mut _ = &mut $var0;
+            $offset.swap(ptr, ptr);
+            assert_eq!($offset.get_copy(&$var0), $val0);
+        }
+
+        $offset.swap(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val1);
+        assert_eq!($offset.get_copy(&$var1), $val0);
+
+        $offset.swap_nonoverlapping(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val0);
+        assert_eq!($offset.get_copy(&$var1), $val1);
+
+        $offset.swap_mut(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val1);
+        assert_eq!($offset.get_copy(&$var1), $val0);
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _priv_copy_tests {
+    (
+        $offset:expr,
+        variables($var0:ident, $var1:ident)
+        values($($val:expr),* $(,)?)
+    ) => {{
+        $({
+            assert_ne!( $offset.get_copy(&$var0), $val );
+            assert_ne!( $offset.get_copy(&$var1), $val );
+            $offset.write(&mut $var0, $val);
+            {
+                let ptr: *mut _ = &mut $var0;
+                $offset.copy(ptr, ptr);
+            }
+            $offset.copy(&$var0, &mut $var1);
+            assert_eq!( $offset.get_copy(&$var0), $val );
+            assert_eq!( $offset.get_copy(&$var1), $val );
+        })*
+        $({
+            assert_ne!( $offset.get_copy(&$var0), $val );
+            assert_ne!( $offset.get_copy(&$var1), $val );
+            $offset.write(&mut $var0, $val);
+            $offset.copy_nonoverlapping(&$var0, &mut $var1);
+            assert_eq!( $offset.get_copy(&$var0), $val );
+            assert_eq!( $offset.get_copy(&$var1), $val );
+        })*
+    }};
+
+}

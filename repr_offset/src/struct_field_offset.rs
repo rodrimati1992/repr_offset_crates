@@ -106,7 +106,7 @@ impl<S, F, A> Clone for FieldOffset<S, F, A> {
 // caused by delegating to `get_ptr`
 macro_rules! get_ptr_method {
     ($self:ident, $base:expr, $F:ty) => {
-        (($base as *const _ as *const u8).offset($self.offset as isize) as *const $F)
+        ($base as *const _ as *const u8).offset($self.offset as isize) as *const $F
     };
 }
 
@@ -316,6 +316,40 @@ impl<S, F> FieldOffset<S, F, Aligned> {
         get_mut_ptr_method!(self, source, F).write(value)
     }
 
+    /// Copies the field in `source` into `destination`.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html).
+    ///
+    #[inline(always)]
+    pub unsafe fn copy(self, source: *const S, destination: *mut S) {
+        core::ptr::copy(
+            get_ptr_method!(self, source, F),
+            get_mut_ptr_method!(self, destination, F),
+            1,
+        );
+    }
+
+    /// Copies the field in `source` into `destination`,
+    /// `source` and `destination` must not overlap.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::copy_nonoverlapping`
+    /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html).
+    ///
+    #[inline(always)]
+    pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
+        core::ptr::copy_nonoverlapping(
+            get_ptr_method!(self, source, F),
+            get_mut_ptr_method!(self, destination, F),
+            1,
+        );
+    }
+
     /// Replaces the value of a field in `dest` with `value`,
     /// returning the old value of the field.
     ///
@@ -395,7 +429,8 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Safety
     ///
     /// This function has the same safety requirements as
-    /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
+    /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html),
+    /// except that `dest` does not need to be properly aligned.
     ///
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
@@ -407,11 +442,47 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Safety
     ///
     /// This function has the same safety requirements as
-    /// [`std::ptr::write_unaligned`](https://doc.rust-lang.org/std/ptr/fn.write_unaligned.html).
+    /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
     ///
     #[inline(always)]
     pub unsafe fn write(self, source: *mut S, value: F) {
         get_mut_ptr_method!(self, source, F).write_unaligned(value)
+    }
+
+    /// Copies the field in `source` into `destination`.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html),
+    /// except that `destination` does not need to be properly aligned.
+    ///
+    #[inline(always)]
+    pub unsafe fn copy(self, source: *const S, destination: *mut S) {
+        core::ptr::copy(
+            get_ptr_method!(self, source, F) as *const u8,
+            get_mut_ptr_method!(self, destination, F) as *mut u8,
+            Mem::<F>::SIZE,
+        );
+    }
+
+    /// Copies the field in `source` into `destination`,
+    /// `source` and `destination` must not overlap.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::copy_nonoverlapping`
+    /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html),
+    /// except that `destination` does not need to be properly aligned.
+    ///
+    #[inline(always)]
+    pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
+        core::ptr::copy_nonoverlapping(
+            get_ptr_method!(self, source, F) as *const u8,
+            get_mut_ptr_method!(self, destination, F) as *mut u8,
+            Mem::<F>::SIZE,
+        );
     }
 }
 

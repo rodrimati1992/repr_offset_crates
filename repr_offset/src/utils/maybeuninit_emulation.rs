@@ -11,9 +11,11 @@ pub(crate) enum UnalignedMaybeUninit<T> {
 }
 
 impl<T> UnalignedMaybeUninit<T> {
+    #[inline(always)]
     pub const fn uninit() -> Self {
         UnalignedMaybeUninit::Uninit
     }
+    #[inline(always)]
     pub fn as_mut_ptr(&mut self) -> *mut T {
         unsafe {
             // The offset is 1 because `Packed` always has an alignment of 1,

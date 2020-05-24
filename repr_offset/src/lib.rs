@@ -51,9 +51,9 @@
 //! /// Callers must pass a pointer to uninitialized memory with the
 //! /// size and alignment of `Foo`
 //! unsafe fn initialize_foo(this: *mut Foo){
-//!     Foo::OFFSET_NAME.get_raw_mut(this).write("foo".into());
-//!     Foo::OFFSET_X.get_raw_mut(this).write(13);
-//!     Foo::OFFSET_Y.get_raw_mut(this).write(21);
+//!     Foo::OFFSET_NAME.get_mut_ptr(this).write("foo".into());
+//!     Foo::OFFSET_X.get_mut_ptr(this).write(13);
+//!     Foo::OFFSET_Y.get_mut_ptr(this).write(21);
 //! }
 //!
 //! #[repr(C)]

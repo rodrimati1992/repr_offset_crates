@@ -1,6 +1,7 @@
 use crate::{
-    offset_calc::GetNextFieldOffset, utils::Mem, Aligned, Alignment, CombinePacking,
-    CombinePackingOut, Unaligned,
+    offset_calc::GetNextFieldOffset,
+    utils::{Mem, UnalignedMaybeUninit},
+    Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned,
 };
 
 use core::{
@@ -102,18 +103,18 @@ impl<S, F, A> Clone for FieldOffset<S, F, A> {
 }
 
 // Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `get_raw`
-macro_rules! get_raw_method {
+// caused by delegating to `get_ptr`
+macro_rules! get_ptr_method {
     ($self:ident, $base:expr, $F:ty) => {
         (($base as *const _ as *const u8).offset($self.offset as isize) as *const $F)
     };
 }
 
 // Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `get_raw_mut`
-macro_rules! get_raw_mut_method {
+// caused by delegating to `get_mut_ptr`
+macro_rules! get_mut_ptr_method {
     ($self:ident, $base:expr, $F:ty) => {
-        (($base as *mut _ as *mut u8).offset($self.offset as isize) as *mut $F)
+        ($base as *mut _ as *mut u8).offset($self.offset as isize) as *mut $F
     };
 }
 
@@ -236,7 +237,9 @@ impl<S, F, A> FieldOffset<S, F, A> {
 
     /// Changes this `FieldOffset` to be for a (potentially) unaligned field.
     ///
-    pub const fn cast_unaligned(self) -> FieldOffset<S, F, Unaligned> {
+    /// This is useful if you want to get a field from an unaligned pointer to a
+    /// `#[repr(C)]`/`#[repr(C,align())]` struct.
+    pub const fn to_unaligned(self) -> FieldOffset<S, F, Unaligned> {
         FieldOffset {
             offset: self.offset,
             _marker: PhantomData,
@@ -248,20 +251,20 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Safety
     ///
     /// Callers must ensure that the offset is a multiple of the alignment of the `F` type.
-    pub const unsafe fn cast_aligned(self) -> FieldOffset<S, F, Aligned> {
+    pub const unsafe fn to_aligned(self) -> FieldOffset<S, F, Aligned> {
         FieldOffset::new(self.offset)
     }
 
-    /// Gets a raw pointer to the field that this is an offset for.
+    /// Gets a raw pointer to a field from a pointer to the `S` struct.
     #[inline(always)]
-    pub fn get_raw(self, base: *const S) -> *const F {
-        unsafe { get_raw_method!(self, base, F) }
+    pub fn get_ptr(self, base: *const S) -> *const F {
+        unsafe { get_ptr_method!(self, base, F) }
     }
 
-    /// Gets a mutable raw pointer to the field that this is an offset for.
+    /// Gets a mutable raw pointer to a field from a pointer to the `S` struct.
     #[inline(always)]
-    pub fn get_raw_mut(self, base: *mut S) -> *mut F {
-        unsafe { get_raw_mut_method!(self, base, F) }
+    pub fn get_mut_ptr(self, base: *mut S) -> *mut F {
+        unsafe { get_mut_ptr_method!(self, base, F) }
     }
 }
 
@@ -269,13 +272,13 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// Gets a reference to the field that this is an offset for.
     #[inline(always)]
     pub fn get(self, base: &S) -> &F {
-        unsafe { &*get_raw_method!(self, base, F) }
+        unsafe { &*get_ptr_method!(self, base, F) }
     }
 
     /// Gets a mutable reference to the field that this is an offset for.
     #[inline(always)]
     pub fn get_mut(self, base: &mut S) -> &mut F {
-        unsafe { &mut *get_raw_mut_method!(self, base, F) }
+        unsafe { &mut *get_mut_ptr_method!(self, base, F) }
     }
 }
 
@@ -286,7 +289,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     where
         F: Copy,
     {
-        unsafe { *get_raw_method!(self, base, F) }
+        unsafe { *get_ptr_method!(self, base, F) }
     }
 
     /// Reads the value from the field in `source` without moving it.
@@ -298,7 +301,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
-        get_raw_method!(self, source, F).read()
+        get_ptr_method!(self, source, F).read()
     }
 
     /// Writes `value` ìnto the field in `source` without dropping the old value of the field.
@@ -310,7 +313,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     #[inline(always)]
     pub unsafe fn write(self, source: *mut S, value: F) {
-        get_raw_mut_method!(self, source, F).write(value)
+        get_mut_ptr_method!(self, source, F).write(value)
     }
 
     /// Replaces the value of a field in `dest` with `value`,
@@ -322,25 +325,59 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// [`std::ptr::replace`](https://doc.rust-lang.org/std/ptr/fn.replace.html).
     ///
     #[inline(always)]
-    pub unsafe fn replace_raw(self, dest: *mut S, value: F) -> F {
-        core::mem::replace(&mut *get_raw_mut_method!(self, dest, F), value)
+    pub unsafe fn replace(self, dest: *mut S, value: F) -> F {
+        core::mem::replace(&mut *get_mut_ptr_method!(self, dest, F), value)
     }
 
     /// Replaces the value of a field in `dest` with `value`,
     /// returning the old value of the field.
     ///
+    #[inline(always)]
     pub fn replace_mut(self, dest: &mut S, value: F) -> F {
-        unsafe { core::mem::replace(&mut *get_raw_mut_method!(self, dest, F), value) }
+        unsafe { core::mem::replace(&mut *get_mut_ptr_method!(self, dest, F), value) }
     }
-}
 
-macro_rules! replace_unaligned {
-    ($self:ident, $base:expr, $value:expr, $F:ty) => {{
-        let ptr = get_raw_mut_method!($self, $base, $F);
-        let ret = ptr.read_unaligned();
-        ptr.write_unaligned($value);
-        ret
-    }};
+    /// Swaps the values of a field between the `left` and `right` pointers.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html).
+    ///
+    #[inline(always)]
+    pub unsafe fn swap(self, left: *mut S, right: *mut S) {
+        core::ptr::swap(
+            get_mut_ptr_method!(self, left, F),
+            get_mut_ptr_method!(self, right, F),
+        )
+    }
+
+    /// Swaps the values of a field between the `left` and `right` non-overlapping pointers.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::swap_nonoverlapping`
+    /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html).
+    ///
+    #[inline(always)]
+    pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
+        core::ptr::swap(
+            get_mut_ptr_method!(self, left, F),
+            get_mut_ptr_method!(self, right, F),
+        )
+    }
+
+    /// Swaps the values of a field between `left` and `right`.
+    #[inline(always)]
+    pub fn swap_mut(self, left: &mut S, right: &mut S) {
+        unsafe {
+            core::mem::swap(
+                &mut *get_mut_ptr_method!(self, left, F),
+                &mut *get_mut_ptr_method!(self, right, F),
+            )
+        }
+    }
 }
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
@@ -350,7 +387,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     where
         F: Copy,
     {
-        unsafe { get_raw_method!(self, base, F).read_unaligned() }
+        unsafe { get_ptr_method!(self, base, F).read_unaligned() }
     }
 
     /// Reads the value from the field in `source` without moving it.
@@ -362,7 +399,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
-        get_raw_method!(self, source, F).read_unaligned()
+        get_ptr_method!(self, source, F).read_unaligned()
     }
 
     /// Writes `value` ìnto the field in `source` without dropping the old value of the field.
@@ -374,9 +411,20 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     #[inline(always)]
     pub unsafe fn write(self, source: *mut S, value: F) {
-        get_raw_mut_method!(self, source, F).write_unaligned(value)
+        get_mut_ptr_method!(self, source, F).write_unaligned(value)
     }
+}
 
+macro_rules! replace_unaligned {
+    ($self:ident, $base:expr, $value:expr, $F:ty) => {{
+        let ptr = get_mut_ptr_method!($self, $base, $F);
+        let ret = ptr.read_unaligned();
+        ptr.write_unaligned($value);
+        ret
+    }};
+}
+
+impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Replaces the value of a field in `dest` with `value`,
     /// returning the old value of the field.
     ///
@@ -387,7 +435,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// except that `dest` does not need to be properly aligned.
     ///
     #[inline(always)]
-    pub unsafe fn replace_raw(self, dest: *mut S, value: F) -> F {
+    pub unsafe fn replace(self, dest: *mut S, value: F) -> F {
         replace_unaligned!(self, dest, value, F)
     }
 
@@ -396,6 +444,61 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     pub fn replace_mut(self, dest: &mut S, value: F) -> F {
         unsafe { replace_unaligned!(self, dest, value, F) }
+    }
+}
+
+macro_rules! unaligned_swap {
+    ($self:ident, $left:ident, $right:ident, $left_to_right:expr, $F:ty) => {{
+        // This function can definitely be optimized.
+        let mut tmp = UnalignedMaybeUninit::<$F>::uninit();
+        let tmp = tmp.as_mut_ptr() as *mut u8;
+
+        let $left = get_mut_ptr_method!($self, $left, $F) as *mut u8;
+        let $right = get_mut_ptr_method!($self, $right, $F) as *mut u8;
+        core::ptr::copy_nonoverlapping($left, tmp, Mem::<$F>::SIZE);
+        $left_to_right($right, $left, Mem::<$F>::SIZE);
+        core::ptr::copy_nonoverlapping(tmp, $right, Mem::<$F>::SIZE);
+    }};
+}
+
+impl<S, F> FieldOffset<S, F, Unaligned> {
+    /// Swaps the values of a field between the `left` and `right` pointers.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html),
+    /// except that it does not require an aligned pointer.
+    #[inline(always)]
+    pub unsafe fn swap(self, left: *mut S, right: *mut S) {
+        unaligned_swap!(self, left, right, core::ptr::copy, F)
+    }
+
+    /// Swaps the values of a field between the non-overlapping `left` and `right` pointers.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::swap_nonoverlapping`
+    /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html)
+    /// except that it does not require an aligned pointer.
+    ///
+    #[inline(always)]
+    pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
+        unaligned_swap!(self, left, right, core::ptr::copy_nonoverlapping, F)
+    }
+
+    /// Swaps the values of a field between `left` and `right`.
+    #[inline(always)]
+    pub fn swap_mut(self, left: &mut S, right: &mut S) {
+        // This function could probably be optimized.
+        unsafe {
+            let left = get_mut_ptr_method!(self, left, F);
+            let right = get_mut_ptr_method!(self, right, F);
+            let tmp = left.read_unaligned();
+            left.write_unaligned(right.read_unaligned());
+            right.write_unaligned(tmp);
+        }
     }
 }
 

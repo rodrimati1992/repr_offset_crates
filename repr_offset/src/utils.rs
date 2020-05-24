@@ -29,3 +29,14 @@ mod tests {
         }
     }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(any(not(rust_1_36), test))]
+mod maybeuninit_emulation;
+
+#[cfg(rust_1_36)]
+pub(crate) type UnalignedMaybeUninit<T> = core::mem::MaybeUninit<T>;
+
+#[cfg(not(rust_1_36))]
+pub(crate) type UnalignedMaybeUninit<T> = self::maybeuninit_emulation::UnalignedMaybeUninit<T>;

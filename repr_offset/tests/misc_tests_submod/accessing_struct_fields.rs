@@ -7,45 +7,78 @@ use repr_offset::{
     Aligned, FieldOffset, Unaligned,
 };
 
+macro_rules! swap_tests {
+    (
+        $offset:expr,
+        variables($var0:ident, $var1:ident)
+        values($val0:expr, $val1:expr)
+    ) => {{
+        assert_eq!($offset.get_copy(&$var0), $val0);
+        assert_eq!($offset.get_copy(&$var1), $val1);
+
+        // Testing the identity swap
+        {
+            let ptr: *mut _ = &mut $var0;
+            $offset.swap(ptr, ptr);
+            assert_eq!($offset.get_copy(&$var0), $val0);
+        }
+
+        $offset.swap(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val1);
+        assert_eq!($offset.get_copy(&$var1), $val0);
+
+        $offset.swap_nonoverlapping(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val0);
+        assert_eq!($offset.get_copy(&$var1), $val1);
+
+        $offset.swap_mut(&mut $var0, &mut $var1);
+        assert_eq!($offset.get_copy(&$var0), $val1);
+        assert_eq!($offset.get_copy(&$var1), $val0);
+    }};
+}
+
 #[test]
 fn access_aligned() {
     _priv_run_with_types! {
         type_constructors[ StructReprC, StructAlign2, StructAlign4, StructAlign8 ],
         (vec![0,1,2,3], Align16(5u8), 16.0_f64, [Align16(());0])
-        |var, off0, off1, off2, off3| unsafe{
+        (vec![0,1,2,3], Align16(34u8), 100.0_f64, [Align16(());0])
+        |var, other, off0, off1, off2, off3| unsafe{
             assert_eq!( off0.get(&var), &vec![0,1,2,3] );
-            assert_eq!( off0.get_raw(&var), off0.get(&var) as *const _ );
+            assert_eq!( off0.get_ptr(&var), off0.get(&var) as *const _ );
             assert_eq!( off0.get_mut(&mut var), &mut vec![0,1,2,3] );
-            assert_eq!( &mut *off0.get_raw_mut(&mut var), &mut vec![0,1,2,3] );
+            assert_eq!( &mut *off0.get_mut_ptr(&mut var), &mut vec![0,1,2,3] );
 
             assert_eq!( off1.get(&var), &Align16(5u8) );
-            assert_eq!( &*off1.get_raw(&var), off1.get(&var) );
+            assert_eq!( &*off1.get_ptr(&var), off1.get(&var) );
             assert_eq!( off1.get_mut(&mut var), &mut Align16(5u8) );
-            assert_eq!( &mut *off1.get_raw_mut(&mut var), &mut Align16(5u8) );
+            assert_eq!( &mut *off1.get_mut_ptr(&mut var), &mut Align16(5u8) );
             assert_eq!( off1.get_copy(&var), Align16(5u8) );
             assert_eq!( off1.read(&var), Align16(5u8) );
             off1.write(&mut var, Align16(8u8));
             assert_eq!( off1.read(&var), Align16(8u8) );
-            assert_eq!( off1.replace_raw(&mut var, Align16(13u8)), Align16(8u8) );
+            assert_eq!( off1.replace(&mut var, Align16(13u8)), Align16(8u8) );
             assert_eq!( off1.replace_mut(&mut var, Align16(21u8)), Align16(13u8) );
             assert_eq!( off1.read(&var), Align16(21u8) );
+            swap_tests!( off1, variables(var, other) values(Align16(21u8), Align16(34u8)) );
 
             assert_eq!( off2.get(&var), &16.0 );
-            assert_eq!( off2.get_raw(&var), off2.get(&var) as *const _ );
+            assert_eq!( off2.get_ptr(&var), off2.get(&var) as *const _ );
             assert_eq!( off2.get_mut(&mut var), &mut 16.0 );
-            assert_eq!( &mut *off2.get_raw_mut(&mut var), &mut 16.0 );
+            assert_eq!( &mut *off2.get_mut_ptr(&mut var), &mut 16.0 );
             assert_eq!( off2.get_copy(&var), 16.0 );
             assert_eq!( off2.read(&var), 16.0 );
             off2.write(&mut var, 24.0);
             assert_eq!( off2.read(&var), 24.0 );
-            assert_eq!( off2.replace_raw(&mut var, 25.0), 24.0 );
+            assert_eq!( off2.replace(&mut var, 25.0), 24.0 );
             assert_eq!( off2.replace_mut(&mut var, 26.0), 25.0 );
             assert_eq!( off2.read(&var), 26.0);
+            swap_tests!( off2, variables(var, other) values(26.0, 100.0) );
 
             assert_eq!( off3.get(&var), &[Align16(());0] );
-            assert_eq!( off3.get_raw(&var), off3.get(&var) as *const _ );
+            assert_eq!( off3.get_ptr(&var), off3.get(&var) as *const _ );
             assert_eq!( off3.get_mut(&mut var), &mut [Align16(());0] );
-            assert_eq!( &mut *off3.get_raw_mut(&mut var), &mut [Align16(());0] );
+            assert_eq!( &mut *off3.get_mut_ptr(&mut var), &mut [Align16(());0] );
             assert_eq!( off3.get_copy(&var), [Align16(());0] );
 
         },
@@ -72,7 +105,8 @@ fn access_aligned() {
     _priv_run_with_types! {
         type_constructors[ StructReprC, StructAlign2, StructAlign4, StructAlign8 ],
         (0u32, SECOND, 0u32, FOURTH)
-        |var, off0, off1, off2, off3| {
+        (0u32, SECOND, 0u32, FOURTH)
+        |var, _other, off0, off1, off2, off3| {
             let _: FieldOffset<_, ReprCType, Aligned> = off1;
             let _: FieldOffset<_, PackedType, Aligned> = off3;
 
@@ -121,40 +155,43 @@ fn access_unaligned() {
             StructPacked, StructPacked2, StructPacked4, StructPacked8,StructPacked16,
         ],
         ([3usize, 5, 8], Align16(5u8), 16.0_f64, [Align4(());0])
-        |var, off0, off1, off2, off3| unsafe{
+        ([3usize, 5, 8], Align16(34u8), 16.0_f64, [Align4(());0])
+        |var, other, off0, off1, off2, off3| unsafe{
             assert_eq!( off0.get(&var), "nope");
             assert_eq!( off0.get_mut(&mut var), "nope");
-            assert_eq!( off0.get_raw(&var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.get_raw_mut(&mut var).read_unaligned(), [3usize, 5, 8] );
+            assert_eq!( off0.get_ptr(&var).read_unaligned(), [3usize, 5, 8] );
+            assert_eq!( off0.get_mut_ptr(&mut var).read_unaligned(), [3usize, 5, 8] );
 
             assert_eq!( off1.get(&var), "nope");
             assert_eq!( off1.get_mut(&mut var), "nope");
-            assert_eq!( off1.get_raw(&var).read_unaligned(), Align16(5u8) );
-            assert_eq!( off1.get_raw_mut(&mut var).read_unaligned(), Align16(5u8) );
+            assert_eq!( off1.get_ptr(&var).read_unaligned(), Align16(5u8) );
+            assert_eq!( off1.get_mut_ptr(&mut var).read_unaligned(), Align16(5u8) );
             assert_eq!( off1.get_copy(&var), Align16(5u8) );
             assert_eq!( off1.read(&var), Align16(5u8) );
             off1.write(&mut var, Align16(8u8));
             assert_eq!( off1.read(&var), Align16(8u8) );
-            assert_eq!( off1.replace_raw(&mut var, Align16(13u8)), Align16(8u8) );
+            assert_eq!( off1.replace(&mut var, Align16(13u8)), Align16(8u8) );
             assert_eq!( off1.replace_mut(&mut var, Align16(21u8)), Align16(13u8) );
             assert_eq!( off1.read(&var), Align16(21u8) );
+            swap_tests!( off1, variables(var, other) values(Align16(21u8), Align16(34u8)) );
 
             assert_eq!( off2.get(&var), "nope");
             assert_eq!( off2.get_mut(&mut var), "nope");
-            assert_eq!( off2.get_raw(&var).read_unaligned(), 16.0 );
-            assert_eq!( off2.get_raw_mut(&mut var).read_unaligned(), 16.0 );
+            assert_eq!( off2.get_ptr(&var).read_unaligned(), 16.0 );
+            assert_eq!( off2.get_mut_ptr(&mut var).read_unaligned(), 16.0 );
             assert_eq!( off2.get_copy(&var), 16.0 );
             assert_eq!( FieldOffset::<_,_,Unaligned>::read(off2,&var), 16.0 );
             off2.write(&mut var, 24.0);
             assert_eq!( off2.read(&var), 24.0 );
-            assert_eq!( off2.replace_raw(&mut var, 25.0), 24.0 );
+            assert_eq!( off2.replace(&mut var, 25.0), 24.0 );
             assert_eq!( off2.replace_mut(&mut var, 26.0), 25.0 );
             assert_eq!( off2.read(&var), 26.0 );
+            swap_tests!( off2, variables(var, other) values(26.0, 16.0) );
 
             assert_eq!( off3.get(&var), "nope");
             assert_eq!( off3.get_mut(&mut var), "nope");
-            assert_eq!( off3.get_raw(&var).read_unaligned(), [Align4(());0] );
-            assert_eq!( off3.get_raw_mut(&mut var).read_unaligned(), [Align4(());0] );
+            assert_eq!( off3.get_ptr(&var).read_unaligned(), [Align4(());0] );
+            assert_eq!( off3.get_mut_ptr(&mut var).read_unaligned(), [Align4(());0] );
             assert_eq!( off3.get_copy(&var), [Align4(());0] );
 
         },
@@ -181,7 +218,8 @@ fn access_unaligned() {
     _priv_run_with_types! {
         type_constructors[ StructPacked, StructPacked4, StructPacked8 ],
         (0u32, SECOND, 0u32, FOURTH)
-        |var, off0, off1, off2, off3| {
+        (0u32, SECOND, 0u32, FOURTH)
+        |var, _other, off0, off1, off2, off3| {
             let _: FieldOffset<_, ReprCType, Unaligned> = off1;
             let _: FieldOffset<_, PackedType, Unaligned> = off3;
 
@@ -236,7 +274,7 @@ fn replace_struct_field() {
     );
 
     fn replace_table(this: &mut Bar, replacement: String) -> String {
-        let ptr = Bar::OFFSET_TABLE.get_raw_mut(this);
+        let ptr = Bar::OFFSET_TABLE.get_mut_ptr(this);
         unsafe {
             let taken = ptr.read_unaligned();
             ptr.write_unaligned(replacement);

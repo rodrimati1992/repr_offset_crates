@@ -96,7 +96,7 @@
 /// assert_eq!( replace_table(&mut bar, "carbonite".to_string()), "granite".to_string());
 ///
 /// fn replace_table(this: &mut Bar, replacement: String)-> String{
-///     let ptr = Bar::OFFSET_TABLE.get_raw_mut(this);
+///     let ptr = Bar::OFFSET_TABLE.get_mut_ptr(this);
 ///     unsafe{
 ///         let taken = ptr.read_unaligned();
 ///         ptr.write_unaligned(replacement);

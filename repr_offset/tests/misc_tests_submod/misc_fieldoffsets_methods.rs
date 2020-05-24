@@ -161,10 +161,10 @@ fn cast_alignment() {
     let _: FieldOffset<_, _, Aligned> = Consts::OFFSET_C;
     let _: FieldOffset<_, _, Aligned> = Consts::OFFSET_D;
 
-    let packed_a: FieldOffset<_, _, Unaligned> = Consts::OFFSET_A.cast_unaligned();
-    let packed_b: FieldOffset<_, _, Unaligned> = Consts::OFFSET_B.cast_unaligned();
-    let packed_c: FieldOffset<_, _, Unaligned> = Consts::OFFSET_C.cast_unaligned();
-    let packed_d: FieldOffset<_, _, Unaligned> = Consts::OFFSET_D.cast_unaligned();
+    let packed_a: FieldOffset<_, _, Unaligned> = Consts::OFFSET_A.to_unaligned();
+    let packed_b: FieldOffset<_, _, Unaligned> = Consts::OFFSET_B.to_unaligned();
+    let packed_c: FieldOffset<_, _, Unaligned> = Consts::OFFSET_C.to_unaligned();
+    let packed_d: FieldOffset<_, _, Unaligned> = Consts::OFFSET_D.to_unaligned();
 
     assert_eq!(packed_a.get_copy(&this), (-3i32) as u32);
     assert_eq!(packed_b.get_copy(&this), (-5i32) as u32);
@@ -172,14 +172,14 @@ fn cast_alignment() {
     assert_eq!(packed_d.get_copy(&this), (-13i32) as u32);
 
     unsafe {
-        let _: FieldOffset<_, _, Aligned> = packed_a.cast_aligned();
-        let _: FieldOffset<_, _, Aligned> = packed_b.cast_aligned();
-        let _: FieldOffset<_, _, Aligned> = packed_c.cast_aligned();
-        let _: FieldOffset<_, _, Aligned> = packed_d.cast_aligned();
+        let _: FieldOffset<_, _, Aligned> = packed_a.to_aligned();
+        let _: FieldOffset<_, _, Aligned> = packed_b.to_aligned();
+        let _: FieldOffset<_, _, Aligned> = packed_c.to_aligned();
+        let _: FieldOffset<_, _, Aligned> = packed_d.to_aligned();
 
-        assert_eq!(packed_a.cast_aligned(), Consts::OFFSET_A);
-        assert_eq!(packed_b.cast_aligned(), Consts::OFFSET_B);
-        assert_eq!(packed_c.cast_aligned(), Consts::OFFSET_C);
-        assert_eq!(packed_d.cast_aligned(), Consts::OFFSET_D);
+        assert_eq!(packed_a.to_aligned(), Consts::OFFSET_A);
+        assert_eq!(packed_b.to_aligned(), Consts::OFFSET_B);
+        assert_eq!(packed_c.to_aligned(), Consts::OFFSET_C);
+        assert_eq!(packed_d.to_aligned(), Consts::OFFSET_D);
     }
 }

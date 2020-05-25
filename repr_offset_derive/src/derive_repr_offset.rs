@@ -1,5 +1,5 @@
 use as_derive_utils::{
-    datastructure::{DataStructure, DataVariant},
+    datastructure::{DataStructure, DataVariant, FieldIdent},
     gen_params_in::{GenParamsIn, InWhat},
     return_syn_err, ToTokenFnMut,
 };
@@ -63,24 +63,34 @@ fn derive_inner(
         .generics
         .where_clause
         .as_ref()
-        .map_or(&empty_punct, |x| &x.predicates);
+        .map_or(&empty_punct, |x| &x.predicates)
+        .iter();
 
     let struct_ = &ds.variants[0];
 
     let vis = struct_.fields.iter().map(|x| x.vis);
+    let offset_doc = struct_.fields.iter().map(|field| {
+        if field.is_public() {
+            format!("The offset of the `{}` field.", field.ident())
+        } else {
+            String::new()
+        }
+    });
     let offset_name = struct_.fields.iter().map(|field| {
         ToTokenFnMut::new(move |ts| {
             let f_conf = &options.field_map[field.index];
             match &f_conf.offset_name {
-                None => concat_field_ident(&options.offset_prefix, field.ident()).to_tokens(ts),
+                None => concat_field_ident(&options.offset_prefix, &field.ident).to_tokens(ts),
                 Some(OffsetIdent::Prefix(prefix)) => {
-                    concat_field_ident(prefix, field.ident()).to_tokens(ts)
+                    concat_field_ident(prefix, &field.ident).to_tokens(ts)
                 }
                 Some(OffsetIdent::Full(full)) => full.to_tokens(ts),
             }
         })
     });
     let field_tys = struct_.fields.iter().map(|x| x.ty);
+
+    let extra_bounds = options.extra_bounds.iter();
 
     Ok(quote! {
         ::repr_offset::unsafe_struct_field_offsets!{
@@ -89,9 +99,12 @@ fn derive_inner(
             #( starting_offset = #starting_offset, )*
 
             impl[#impl_generics] #name #ty_generics
-            where[ #where_preds ]
-            {
+            where[
+                #( #extra_bounds , )*
+                #( #where_preds , )*
+            ]{
                 #(
+                    #[doc = #offset_doc]
                     #vis const #offset_name: #field_tys;
                 )*
             }
@@ -99,9 +112,18 @@ fn derive_inner(
     })
 }
 
-fn concat_field_ident(prefix: &Ident, field_name: &Ident) -> Ident {
+fn concat_field_ident(prefix: &Ident, field_name: &FieldIdent<'_>) -> Ident {
     Ident::new(
         &format!("{}{}", prefix, field_name.to_string().to_uppercase()),
-        field_name.span(),
+        field_ident_span(field_name),
     )
+}
+
+// Too lazy to add this to FieldIdent
+fn field_ident_span(this: &FieldIdent<'_>) -> Span {
+    match this {
+        FieldIdent::Index(_, ref ident) => ident,
+        FieldIdent::Named(ident) => ident,
+    }
+    .span()
 }

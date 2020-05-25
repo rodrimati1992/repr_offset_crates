@@ -1,3 +1,5 @@
+#![cfg(feature = "priv_expensive_test")]
+
 use repr_offset::{
     _priv_copy_tests as copy_tests, _priv_run_with_types, _priv_swap_tests as swap_tests,
     types_for_tests::{

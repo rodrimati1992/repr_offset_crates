@@ -11,7 +11,7 @@ use proc_macro2::Span;
 
 use quote::ToTokens;
 
-use syn::{Attribute, Ident, Meta, MetaList, MetaNameValue};
+use syn::{Attribute, Ident, Meta, MetaList, MetaNameValue, WherePredicate};
 
 use std::marker::PhantomData;
 
@@ -23,6 +23,7 @@ pub(crate) struct ReprOffsetConfig<'a> {
     pub(crate) use_usize_offsets: bool,
     pub(crate) offset_prefix: Ident,
     pub(crate) field_map: FieldMap<FieldConfig>,
+    pub(crate) extra_bounds: Vec<WherePredicate>,
     _marker: PhantomData<&'a ()>,
 }
 
@@ -36,6 +37,7 @@ impl<'a> ReprOffsetConfig<'a> {
             use_usize_offsets,
             offset_prefix,
             field_map,
+            extra_bounds,
             errors: _,
             _marker: PhantomData,
         } = roa;
@@ -54,6 +56,7 @@ impl<'a> ReprOffsetConfig<'a> {
             use_usize_offsets,
             offset_prefix,
             field_map,
+            extra_bounds,
             _marker: PhantomData,
         })
     }
@@ -69,6 +72,7 @@ struct ReprOffsetAttrs<'a> {
     use_usize_offsets: bool,
     offset_prefix: Ident,
     field_map: FieldMap<FieldConfig>,
+    extra_bounds: Vec<WherePredicate>,
     errors: LinearResult<()>,
     _marker: PhantomData<&'a ()>,
 }
@@ -101,6 +105,7 @@ pub(crate) fn parse_attrs_for_derive<'a>(
         use_usize_offsets: false,
         offset_prefix: Ident::new("OFFSET_", Span::call_site()),
         field_map: FieldMap::with(ds, |_| FieldConfig { offset_name: None }),
+        extra_bounds: vec![],
         errors: LinearResult::ok(()),
         _marker: PhantomData,
     };
@@ -183,9 +188,9 @@ fn parse_sabi_attr<'a>(
         (ParseContext::Field { field, .. }, Meta::NameValue(MetaNameValue { lit, path, .. })) => {
             let f_config = &mut this.field_map[field.index];
             if path.is_ident("offset") {
-                f_config.offset_name = Some(OffsetIdent::Full(lit_to_ident(&lit)?));
+                f_config.offset_name = Some(OffsetIdent::Full(parse_lit(&lit)?));
             } else if path.is_ident("offset_prefix") {
-                f_config.offset_name = Some(OffsetIdent::Prefix(lit_to_ident(&lit)?));
+                f_config.offset_name = Some(OffsetIdent::Prefix(parse_lit(&lit)?));
             } else {
                 return Err(make_err(&path));
             }
@@ -203,9 +208,11 @@ fn parse_sabi_attr<'a>(
             let ident = path.get_ident().ok_or_else(|| make_err(&path))?;
 
             if ident == "offset_prefix" {
-                this.offset_prefix = lit_to_ident(&lit)?;
+                this.offset_prefix = parse_lit(&lit)?;
             } else if ident == "unsafe_starting_offset" {
                 this.starting_offset = Some(parse_expr(lit)?);
+            } else if ident == "bound" {
+                this.extra_bounds.push(parse_lit(&lit)?);
             } else {
                 return Err(make_err(&path));
             }
@@ -217,7 +224,10 @@ fn parse_sabi_attr<'a>(
 
 ///////////////////////////////////////////////////////////////////////////////
 
-fn lit_to_ident(lit: &syn::Lit) -> Result<Ident, syn::Error> {
+fn parse_lit<T>(lit: &syn::Lit) -> Result<T, syn::Error>
+where
+    T: syn::parse::Parse,
+{
     match lit {
         syn::Lit::Str(x) => x.parse(),
         _ => Err(spanned_err!(

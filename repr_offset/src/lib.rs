@@ -89,6 +89,9 @@
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
 
+#[doc(hidden)]
+pub extern crate self as repr_offset;
+
 #[macro_use]
 mod internal_macros;
 
@@ -108,11 +111,10 @@ mod struct_field_offset;
 mod utils;
 
 #[cfg(feature = "testing")]
-#[macro_use]
-pub mod tests;
-
-#[cfg(feature = "testing")]
 pub mod types_for_tests;
+
+#[cfg(feature = "derive")]
+pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
     alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},

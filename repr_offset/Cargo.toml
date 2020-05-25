@@ -22,14 +22,22 @@ include = [
 travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 
 [features]
-testing = []
+testing = [
+    "derive",
+    "priv_expensive_test",
+]
+
+priv_expensive_test = []
 
 priv_raw_ref = []
+
+derive = ["repr_offset_derive"]
 
 # To run tests in nightly Rust.
 test_nightly = ["testing","priv_raw_ref"]
 
 [dependencies]
+repr_offset_derive = {version = "0.1", path = "../repr_offset_derive", optional = true}
 
 [build-dependencies]
 rustc_version = "0.2.3"

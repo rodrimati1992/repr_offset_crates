@@ -34,12 +34,6 @@
 /// - `false`: The constants are [`FieldOffset`]s.
 /// - `true`: The constants are `usize`s.
 ///
-/// ### `starting_offset`
-///
-/// The optional `starting_offset` parameter adds an offset to all the generated
-/// offset constants.
-///
-/// When this parameter is not passed, it defaults to `0`.
 ///
 /// [`Aligned`]: ./struct.Aligned.html
 /// [`Unaligned`]: ./struct.Unaligned.html
@@ -67,9 +61,6 @@
 ///
 ///     // Optional parameter.
 ///     usize_offsets = false,
-///
-///     // Optional parameter
-///     starting_offset = 0,
 ///
 ///     impl[T: Copy, U] Bar<T, U>
 ///     where[ U: Clone ]
@@ -131,7 +122,6 @@ macro_rules! unsafe_struct_field_offsets{
         $( Self = $Self:ty, )?
         alignment =  $alignment:ty,
         $( usize_offsets = $usize_offsets:ident,)?
-        $( starting_offset = $starting_offset:expr,)?
 
         $(#[$impl_attr:meta])*
         impl[ $($impl_params:tt)* ] $self:ty
@@ -158,7 +148,7 @@ macro_rules! unsafe_struct_field_offsets{
                     (
                         $crate::_priv_usfoi!(
                             @initial
-                            $($usize_offsets)?, (0 $( + $starting_offset)? ),
+                            $($usize_offsets)?, 0,
                         ),
                         ()
                     ),

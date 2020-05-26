@@ -70,22 +70,6 @@
 //!
 //! - `#[roff(bound = "U: Foo")]`
 //!
-//! ### `#[roff(unsafe_starting_offset = ....)]`
-//!
-//! This attribute changes the offset for the first field,
-//! increasing the offset for the remaining fields as expected.
-//!
-//! Examples:
-//!
-//! - `#[roff(unsafe_starting_offset = 99)]`:
-//! Only integer literals can be written like this,
-//! identifiers and other expressions have to be inside quotes like the examples below.
-//!
-//! - `#[roff(unsafe_starting_offset = "2 + 2")]`
-//!
-//! - `#[roff(unsafe_starting_offset = "std::mem::size_of::<T>()")]`
-//!
-//!
 //! # Field attributes
 //!
 //! ### `#[roff(offset = "fooo")]`

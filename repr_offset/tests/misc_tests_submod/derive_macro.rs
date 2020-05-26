@@ -20,12 +20,11 @@ fn derive_vs_manual() {
     repeated_tests! {
         modules[
             repr_c,
+            repr_transparent,
             aligned,
             packed,
             packed_4,
             use_usize_offsets,
-            starting_offset_a,
-            starting_offset_b,
         ]
     }
 }
@@ -51,6 +50,31 @@ mod repr_c {
             pub const OFFSET_X: u8;
             pub const OFFSET_Y: u64;
             pub const OFFSET_Z: &'static str;
+        }
+    }
+}
+
+mod repr_transparent {
+    use super::*;
+
+    #[repr(transparent)]
+    #[derive(ReprOffset)]
+    pub struct Struct {
+        pub x: (),
+        pub y: String,
+        pub z: PhantomData<Vec<()>>,
+    }
+
+    pub struct MStruct;
+
+    repr_offset::unsafe_struct_field_offsets! {
+        Self = Struct,
+        alignment =  Aligned,
+
+        impl[] MStruct {
+            pub const OFFSET_X: ();
+            pub const OFFSET_Y: String;
+            pub const OFFSET_Z: PhantomData<Vec<()>>;
         }
     }
 }
@@ -189,110 +213,6 @@ mod use_usize_offsets {
             pub const OFFSET_Y: u64;
             pub const OFFSET_Z: &'static str;
         }
-    }
-}
-
-mod starting_offset_a {
-    use super::*;
-
-    #[repr(C, packed)]
-    #[derive(ReprOffset)]
-    #[roff(unsafe_starting_offset = 100)]
-    pub struct Struct {
-        pub x: u8,
-        pub y: u64,
-        pub z: &'static str,
-    }
-
-    pub struct MStruct;
-
-    repr_offset::unsafe_struct_field_offsets! {
-        Self = Struct,
-        alignment = Unaligned,
-        starting_offset = 100,
-
-        impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
-        }
-    }
-}
-
-mod starting_offset_b {
-    use super::*;
-
-    #[repr(C, packed)]
-    #[derive(ReprOffset)]
-    #[roff(unsafe_starting_offset = "30 + 70")]
-    pub struct Struct {
-        pub x: u8,
-        pub y: u64,
-        pub z: &'static str,
-    }
-
-    pub struct MStruct;
-
-    repr_offset::unsafe_struct_field_offsets! {
-        Self = Struct,
-        alignment = Unaligned,
-        starting_offset = 100,
-
-        impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
-        }
-    }
-}
-
-mod starting_offset_c {
-    use super::*;
-
-    #[repr(C, packed)]
-    #[derive(ReprOffset)]
-    #[roff(unsafe_starting_offset = "std::mem::size_of::<T>()")]
-    pub struct Struct<T> {
-        pub x: u8,
-        pub y: u64,
-        pub z: &'static str,
-        _marker: PhantomData<fn() -> T>,
-    }
-
-    pub struct MStruct<T>(T);
-
-    repr_offset::unsafe_struct_field_offsets! {
-        Self = Struct<T>,
-        alignment = Unaligned,
-        starting_offset = std::mem::size_of::<T>(),
-
-        impl[T] MStruct<T> {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
-        }
-    }
-
-    macro_rules! test_type {
-        ($type:ty) => {{
-            type This = Struct<$type>;
-            type Other = MStruct<$type>;
-            const S: usize = std::mem::size_of::<$type>();
-            assert_eq!(This::OFFSET_X, Other::OFFSET_X);
-            assert_eq!(This::OFFSET_Y, Other::OFFSET_Y);
-            assert_eq!(This::OFFSET_Z, Other::OFFSET_Z);
-
-            assert_eq!(This::OFFSET_X.offset(), S);
-            assert_eq!(This::OFFSET_Y.offset(), S + 1);
-            assert_eq!(This::OFFSET_Z.offset(), S + 9);
-        }};
-    }
-
-    #[test]
-    fn generic_starting_offset_test() {
-        test_type!(String);
-        test_type!(u8);
-        test_type!(u16);
     }
 }
 

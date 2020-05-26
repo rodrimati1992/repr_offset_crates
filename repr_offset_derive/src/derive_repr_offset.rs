@@ -51,7 +51,6 @@ fn derive_inner(
     };
 
     let usize_offsets = options.use_usize_offsets;
-    let starting_offset = options.starting_offset.iter();
 
     let impl_generics = GenParamsIn::new(ds.generics, InWhat::ImplHeader);
 
@@ -96,7 +95,6 @@ fn derive_inner(
         ::repr_offset::unsafe_struct_field_offsets!{
             alignment = ::repr_offset::#alignment,
             usize_offsets = #usize_offsets,
-            #( starting_offset = #starting_offset, )*
 
             impl[#impl_generics] #name #ty_generics
             where[
@@ -126,4 +124,13 @@ fn field_ident_span(this: &FieldIdent<'_>) -> Span {
         FieldIdent::Named(ident) => ident,
     }
     .span()
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[test]
+fn test_cases() {
+    use as_derive_utils::test_framework::Tests;
+
+    Tests::load("repr_offset").run_test(|s| syn::parse_str(s).and_then(derive));
 }

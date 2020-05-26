@@ -19,7 +19,6 @@ pub(crate) struct ReprOffsetConfig<'a> {
     pub(crate) debug_print: bool,
     // If there was a #[repr(packed)]
     pub(crate) is_packed: bool,
-    pub(crate) starting_offset: Option<syn::Expr>,
     pub(crate) use_usize_offsets: bool,
     pub(crate) offset_prefix: Ident,
     pub(crate) field_map: FieldMap<FieldConfig>,
@@ -33,7 +32,6 @@ impl<'a> ReprOffsetConfig<'a> {
             debug_print,
             is_packed,
             is_repr_stable,
-            starting_offset,
             use_usize_offsets,
             offset_prefix,
             field_map,
@@ -52,7 +50,6 @@ impl<'a> ReprOffsetConfig<'a> {
         Ok(Self {
             debug_print,
             is_packed,
-            starting_offset,
             use_usize_offsets,
             offset_prefix,
             field_map,
@@ -68,7 +65,6 @@ struct ReprOffsetAttrs<'a> {
     is_packed: bool,
     // If there was a #[repr(transparent)] or #[repr(C)] attribute
     is_repr_stable: bool,
-    starting_offset: Option<syn::Expr>,
     use_usize_offsets: bool,
     offset_prefix: Ident,
     field_map: FieldMap<FieldConfig>,
@@ -101,7 +97,6 @@ pub(crate) fn parse_attrs_for_derive<'a>(
         debug_print: false,
         is_packed: false,
         is_repr_stable: false,
-        starting_offset: None,
         use_usize_offsets: false,
         offset_prefix: Ident::new("OFFSET_", Span::call_site()),
         field_map: FieldMap::with(ds, |_| FieldConfig { offset_name: None }),
@@ -209,8 +204,6 @@ fn parse_sabi_attr<'a>(
 
             if ident == "offset_prefix" {
                 this.offset_prefix = parse_lit(&lit)?;
-            } else if ident == "unsafe_starting_offset" {
-                this.starting_offset = Some(parse_expr(lit)?);
             } else if ident == "bound" {
                 this.extra_bounds.push(parse_lit(&lit)?);
             } else {
@@ -237,6 +230,7 @@ where
     }
 }
 
+#[allow(dead_code)]
 fn parse_expr(lit: syn::Lit) -> Result<syn::Expr, syn::Error> {
     match lit {
         syn::Lit::Str(x) => x.parse(),

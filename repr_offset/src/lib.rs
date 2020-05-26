@@ -25,7 +25,7 @@
 //! If you don't need the derive macro,
 //! you can disable the default feature in the Cargo.toml file with
 //! `repr_offset = { version = "....", default-feature = false }`,
-//! making this crate dependency free.
+//! making a clean compile of this crate take one to three seconds(depends on the machine).
 //!
 //! <span id="root-mod-examples"></span>
 //! # Examples

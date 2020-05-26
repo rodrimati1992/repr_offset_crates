@@ -23,6 +23,9 @@ travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 [lib]
 proc-macro = true
 
+[features]
+testing=["as_derive_utils/testing"]
+
 [dependencies]
 core_extensions = {version="0.1.16", default_features = false}
 as_derive_utils = {version="0.8.2", default_features = false}

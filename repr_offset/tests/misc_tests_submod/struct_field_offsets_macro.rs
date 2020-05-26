@@ -26,7 +26,6 @@ unsafe_struct_field_offsets! {
     Self = Foo,
     alignment =  Aligned,
     usize_offsets = false,
-    starting_offset = 0,
 
     impl[] Consts {
         pub const OFFSET_FOO: u8;
@@ -39,22 +38,8 @@ unsafe_struct_field_offsets! {
     Self = Foo,
     alignment =  Aligned,
     usize_offsets = true,
-    starting_offset = 0,
 
     impl[] UsizeConsts {
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
-        pub const OFFSET_BAZ: u16;
-    }
-}
-
-unsafe_struct_field_offsets! {
-    Self = Foo,
-    alignment =  Aligned,
-    usize_offsets = false,
-    starting_offset = 96,
-
-    impl[] OffsetConsts {
         pub const OFFSET_FOO: u8;
         pub const OFFSET_BAR: u64;
         pub const OFFSET_BAZ: u16;
@@ -85,7 +70,6 @@ unsafe_struct_field_offsets! {
         pub const OFFSET_BAZ: u16;
     }
 }
-
 impl AttributeConsts {
     // This tests that the `OFFSET_BAZ` declared above was cfg-ed out.
     pub const OFFSET_BAZ: &'static str = "nope";
@@ -100,19 +84,6 @@ fn offsets_macro_params() {
     assert_eq!(Foo::OFFSET_FOO.offset(), UsizeConsts::OFFSET_FOO);
     assert_eq!(Foo::OFFSET_BAR.offset(), UsizeConsts::OFFSET_BAR);
     assert_eq!(Foo::OFFSET_BAZ.offset(), UsizeConsts::OFFSET_BAZ);
-
-    assert_eq!(
-        UsizeConsts::OFFSET_FOO + 96,
-        OffsetConsts::OFFSET_FOO.offset()
-    );
-    assert_eq!(
-        UsizeConsts::OFFSET_BAR + 96,
-        OffsetConsts::OFFSET_BAR.offset()
-    );
-    assert_eq!(
-        UsizeConsts::OFFSET_BAZ + 96,
-        OffsetConsts::OFFSET_BAZ.offset()
-    );
 
     assert_eq!(AttributeConsts::OFFSET_FOO, Foo::OFFSET_FOO,);
     assert_eq!(AttributeConsts::OFFSET_BAR, Foo::OFFSET_BAR,);

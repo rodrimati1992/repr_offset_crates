@@ -22,7 +22,7 @@ include = [
 travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 
 [features]
-default_features = ["derive"]
+default = ["derive"]
 
 testing = [
     "derive",

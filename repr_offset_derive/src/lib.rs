@@ -33,3 +33,8 @@ pub fn derive_stable_abi(input: TokenStream1) -> TokenStream1 {
         .unwrap_or_else(|e| e.to_compile_error())
         .into()
 }
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[cfg(all(test, not(feature = "testing")))]
+compile_error! { "tests must be run with the \"testing\" feature" }

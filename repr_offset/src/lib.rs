@@ -6,14 +6,67 @@
 //!
 //! These are some of the features this library provides:
 //!
-//! - Computing the offsets of all the fields in a struct with the
-//! [`unsafe_struct_field_offsets`] macro.
+//! - The [`ReprOffset`] derive macro, which outputs associated constants with the
+//! offsets of fields.<br>
 //!
 //! - Using the [`FieldOffset`] type (how offsets are represented),
-//! to get a pointer (or reference) to a field from a pointer to the struct.
+//! with methods for operating on a field through a pointer to the struct,
+//! including getting a reference(or pointer) to the field.
+//!
+//! - Use the [`unsafe_struct_field_offsets`] macro as an alternative to the
+//! [`ReprOffset`] derive macro, most useful when the "derive" feature is disabled.
+//!
+//! # Dependencies
+//!
+//! This library re-exports the [`ReprOffset`] derive macro from the
+//! `repr_offset_derive` crate when the "derive" feature is enabled
+//! (it's enabled is the default).
+//!
+//! If you don't need the derive macro,
+//! you can disable the default feature in the Cargo.toml file with
+//! `repr_offset = { version = "....", default-feature = false }`,
+//! making this crate dependency free.
 //!
 //! <span id="root-mod-examples"></span>
 //! # Examples
+//!
+//! ### Derivation
+//!
+//! This example demonstrates:
+//!
+//! - Deriving the field offset constants with the [`ReprOffset`] derive macro.
+//!
+//! - Moving out *unaligned* fields through a raw pointer.
+//!
+//! ```rust
+#![cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
+#![cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
+//!
+//! use std::mem::ManuallyDrop;
+//!
+//! #[repr(C, packed)]
+//! #[derive(ReprOffset)]
+//! struct Packed{
+//!     x: u8,
+//!     y: u64,
+//!     z: String,
+//! }
+//!
+//! let mut this = ManuallyDrop::new(Packed{
+//!     x: 5,
+//!     y: 8,
+//!     z: "oh,hi".to_string(),
+//! });
+//!
+//! let ptr = &mut *this;
+//!
+//! unsafe{
+//!     assert_eq!( Packed::OFFSET_X.read(ptr), 5 );
+//!     assert_eq!( Packed::OFFSET_Y.read(ptr), 8 );
+//!     assert_eq!( Packed::OFFSET_Z.read(ptr), "oh,hi".to_string() );
+//! }
+//!
+//! ```
 //!
 //! ### Initialization
 //!
@@ -83,6 +136,7 @@
 //! ```
 //!
 //!
+//! [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 //! [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 //! [`FieldOffset`]: ./struct.FieldOffset.html
 //!
@@ -101,6 +155,8 @@ mod macros;
 #[cfg(feature = "testing")]
 #[macro_use]
 mod test_macros;
+
+pub mod docs;
 
 pub mod offset_calc;
 

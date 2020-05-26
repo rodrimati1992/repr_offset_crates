@@ -21,7 +21,8 @@ use core::{
 /// - `F`(for field): the type of the field this is an offset for.
 ///
 /// - `A`(for alignment):
-/// Is [`Aligned`] if this offset is aligned for the `F` type, [`Unaligned`] if it's not.
+/// Is [`Aligned`] if this offset is aligned for the `F` type within the `S` struct,
+/// [`Unaligned`] if it's not.
 /// This changes which methods are available,and the implementation of some of them.
 ///
 /// # Examples
@@ -30,8 +31,8 @@ use core::{
 ///
 /// This example demonstrates how you can construct `FieldOffset` without macros.
 ///
-/// You can use the [`unsafe_struct_field_offsets`] macro to construct the constants
-/// more conveniently.
+/// You can use the [`ReprOffset`] derive macro or [`unsafe_struct_field_offsets`] macro
+/// to construct the constants more conveniently.
 ///
 /// ```rust
 /// use repr_offset::{Aligned, FieldOffset};
@@ -70,6 +71,7 @@ use core::{
 ///
 /// ```
 ///
+/// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 ///
 #[repr(transparent)]

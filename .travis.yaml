@@ -32,7 +32,7 @@ matrix:
         - cargo test --no-default-features --features "test_nightly priv_expensive_test derive"
         - cargo test --no-default-features --features "test priv_expensive_test derive"
         
-        - cargo clean
+        - cargo clean 
 
         - cargo miri test --no-default-features --features "test priv_expensive_test derive"
         - cargo miri test --no-default-features --features "test_nightly priv_expensive_test derive"

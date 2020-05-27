@@ -10,7 +10,7 @@ use core::{
     ops::Add,
 };
 
-/// Represents the offset of a field inside a type.
+/// Represents the offset of a (potentially nested) field inside a type.
 ///
 /// # Type parameters
 ///
@@ -21,9 +21,42 @@ use core::{
 /// - `F`(for field): the type of the field this is an offset for.
 ///
 /// - `A`(for alignment):
-/// Is [`Aligned`] if this offset is aligned for the `F` type within the `S` struct,
-/// [`Unaligned`] if it's not.
-/// This changes which methods are available,and the implementation of some of them.
+/// Is [`Aligned`] if this offset is for [an aligned field](#alignment-guidelines)
+/// within the `S` struct,
+/// [`Unaligned`] if it is for [an unaligned field](#alignment-guidelines).
+/// This changes which methods are available,and the implementation of many of them.
+///
+/// # Safety
+///
+/// All the unsafe methods for `FieldOffset<_, _, Aligned>` require that
+/// the passed in pointers are aligned,
+/// while the ones for `FieldOffset<_, _, Unaligned>` do not.
+///
+/// Because passing unaligned pointers to `FieldOffset<_, _, Aligned>` methods
+/// causes undefined behavior,
+/// you must be careful when accessing a nested field in `#[repr(C, packed)]` structs.
+///
+/// For an example of how to correctly access nested fields inside of
+/// `#[repr(C, packed)]` structs [look here](#nested-field-in-packed).
+///
+/// <span id="alignment-guidelines"></span>
+/// # Field alignment guidelines
+///
+/// A non-nested field is:
+///
+/// - Aligned: if the type that contains the field is
+/// `#[repr(C)]`/`#[repr(C, align(...))]`/`#[repr(transparent)]`.
+///
+/// - Unaligned: if the type that contains the field is `#[repr(C, packed(....))]`,
+/// and the packing is smaller than the alignment of the field type.<br>
+/// Note that type alignment can vary across platforms,
+/// so `FieldOffset<S, F, Unaligned>`(as opposed to `FieldOffset<S, F, Aligned>`)
+/// is safest when `S` is a `#[repr(C, packed)]` type.
+///
+/// A nested field is unaligned if any field in the chain to access the
+/// nested field (ie: `foo` and `bar` and `baz` in `foo.bar.baz`)
+/// is unaligned according to the rules for non-nested fields described in this section.
+///
 ///
 /// # Examples
 ///
@@ -32,7 +65,7 @@ use core::{
 /// This example demonstrates how you can construct `FieldOffset` without macros.
 ///
 /// You can use the [`ReprOffset`] derive macro or [`unsafe_struct_field_offsets`] macro
-/// to construct the constants more conveniently.
+/// to construct the constants more conveniently (and in a less error-prone way).
 ///
 /// ```rust
 /// use repr_offset::{Aligned, FieldOffset};
@@ -64,12 +97,78 @@ use core::{
 ///     const OFFSET_SECOND: FieldOffset<Self, u32, Aligned> = unsafe{
 ///         Self::OFFSET_FIRST.next_field_offset()
 ///     };
+///
 ///     const OFFSET_THIRD: FieldOffset<Self, Option<T>, Aligned> = unsafe{
 ///         Self::OFFSET_SECOND.next_field_offset()
 ///     };
 /// }
 ///
 /// ```
+///
+/// <span id="nested-field-in-packed"></span>
+/// ### Accessing Nested Fields
+///
+/// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct.
+///
+/// ```rust
+#[cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
+#[cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
+/// use repr_offset::{Aligned, FieldOffset, Unaligned};
+///
+/// #[repr(C, packed)]
+/// #[derive(ReprOffset)]
+/// struct Pack{
+///     x: u8,
+///     y: NestedC,
+/// }
+///
+/// #[repr(C)]
+/// #[derive(ReprOffset)]
+/// struct NestedC{
+///     name: &'static str,
+///     years: usize,
+/// }
+///
+/// const OFFY: FieldOffset<Pack, NestedC, Unaligned> = Pack::OFFSET_Y;
+///
+/// let _: FieldOffset<NestedC, &'static str, Aligned> = NestedC::OFFSET_NAME;
+/// let _: FieldOffset<NestedC, usize, Aligned> = NestedC::OFFSET_YEARS;
+///
+/// // As you can see `FieldOffset::add` combines two offsets,
+/// // allowing you to access a nested field with a single `FieldOffset`.
+/// //
+/// // These `FieldOffset`s have an `Unaligned` type parameter because
+/// // OFFY is a `FieldOffset<_, _, Unaligned>`.
+/// const OFF_NAME: FieldOffset<Pack, &'static str, Unaligned> = OFFY.add(NestedC::OFFSET_NAME);
+/// const OFF_YEARS: FieldOffset<Pack, usize, Unaligned> = OFFY.add(NestedC::OFFSET_YEARS);
+///
+/// let this = Pack{
+///     x: 0,
+///     y: NestedC{ name: "John", years: 13 },
+/// };
+///
+/// assert_eq!(OFF_NAME.get_copy(&this), "John" );
+/// assert_eq!(OFF_YEARS.get_copy(&this), 13 );
+///
+/// unsafe{
+///     let nested_ptr: *const NestedC = OFFY.get_ptr(&this);
+///
+///     // This code is undefined behavior,
+///     // because `NestedC`'s offsets require the passed in pointer to be aligned.
+///     //
+///     // assert_eq!(NestedC::OFFSET_NAME.read(nested_ptr), "John" );
+///     // assert_eq!(NestedC::OFFSET_YEARS.read(nested_ptr), 13 );
+///
+///     // This is fine though,because the offsets were turned into
+///     // `FieldOffset<_, _, Unaligned>` with `.to_unaligned()`.
+///     assert_eq!( NestedC::OFFSET_NAME.to_unaligned().read(nested_ptr), "John" );
+///     assert_eq!( NestedC::OFFSET_YEARS.to_unaligned().read(nested_ptr), 13 );
+///
+/// }
+/// ```
+///
+/// [`Aligned`]: ./struct.Aligned.html
+/// [`Unaligned`]: ./struct.Unaligned.html
 ///
 /// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
@@ -127,16 +226,13 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// Callers must ensure all of these:
     ///
-    /// - `S` must be a `#[repr(C)]` struct.
+    /// - `S` must be a `#[repr(C)]` or `#[repr(transparent)]` struct.
     ///
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
     /// - The `A` type parameter must be [`Unaligned`]
-    /// if the `S` struct is `#[repr(C,packed)]`, or [`Aligned`] if it's not packed.
-    ///
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
-    ///
+    /// if the field [is unaligned](#alignment-guidelines) inside the `S` struct
+    /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
@@ -158,9 +254,13 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that `Next` is the type of the field after the one that
-    /// this is an offset for.
-    pub const unsafe fn next_field_offset<Next>(self) -> FieldOffset<S, Next, A> {
+    /// Callers must ensure that:
+    ///
+    /// - `Next` is the type of the field after the one that this is an offset for.
+    ///
+    /// - `NextA` must be [`Unaligned`] if the field is unaligned,
+    /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
+    pub const unsafe fn next_field_offset<Next, NextA>(self) -> FieldOffset<S, Next, NextA> {
         let offset = GetNextFieldOffset {
             previous_offset: self.offset,
             previous_size: Mem::<F>::SIZE,
@@ -189,6 +289,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Combines this `FieldOffset` with another one, to access a nested field.
+    ///
     #[inline(always)]
     pub const fn add<F2, A2>(self, other: FieldOffset<F, F2, A2>) -> FieldOffset<S, F2, Unaligned> {
         FieldOffset::priv_new(self.offset + other.offset)
@@ -252,7 +353,9 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that the offset is a multiple of the alignment of the `F` type.
+    /// Callers must ensure that [the field is aligned](#alignment-guidelines)
+    /// within the `S` type.
+    ///
     pub const unsafe fn to_aligned(self) -> FieldOffset<S, F, Aligned> {
         FieldOffset::new(self.offset)
     }

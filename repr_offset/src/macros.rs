@@ -182,7 +182,7 @@ macro_rules! _priv_usfoi{
         $value
     };
     (@initial $(false)?, $value:expr, )=>{
-        $crate::FieldOffset::<_,(),_>::new($value)
+        $crate::FieldOffset::<_,(),$crate::Aligned>::new($value)
     };
     (@ty true, $Self:ty, $next_ty:ty, $alignment:ty )=>{
         usize

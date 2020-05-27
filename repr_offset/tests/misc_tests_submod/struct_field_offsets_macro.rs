@@ -9,7 +9,6 @@ pub struct Foo {
 
 pub struct Consts;
 pub struct UsizeConsts;
-pub struct OffsetConsts;
 pub struct AttributeConsts;
 
 unsafe_struct_field_offsets! {

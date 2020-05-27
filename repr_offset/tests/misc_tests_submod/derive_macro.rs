@@ -1,4 +1,6 @@
-use repr_offset::{Aligned, FieldOffset, ReprOffset, Unaligned};
+use repr_offset_derive::ReprOffset;
+
+use repr_offset::{Aligned, FieldOffset, Unaligned};
 
 use std::{fmt::Debug, marker::PhantomData};
 

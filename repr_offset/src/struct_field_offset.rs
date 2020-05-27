@@ -690,14 +690,14 @@ mod tests {
     fn test_constructor_offset() {
         unsafe {
             let field_0 = FieldOffset::<(u128,), u8, Aligned>::new(0);
-            let field_1 = field_0.next_field_offset::<u32>();
+            let field_1 = field_0.next_field_offset::<u32, Aligned>();
             assert_eq!(field_0.offset(), 0);
             assert_eq!(field_1.offset(), mem::align_of::<u32>());
         }
         unsafe {
             let field_0 = FieldOffset::<StructPacked<u128, (), (), ()>, u8, Unaligned>::new(0);
-            let field_1 = field_0.next_field_offset::<u32>();
-            let field_2 = field_1.next_field_offset::<&'static str>();
+            let field_1 = field_0.next_field_offset::<u32, Unaligned>();
+            let field_2 = field_1.next_field_offset::<&'static str, Unaligned>();
             assert_eq!(field_0.offset(), 0);
             assert_eq!(field_1.offset(), 1);
             assert_eq!(field_2.offset(), 5);

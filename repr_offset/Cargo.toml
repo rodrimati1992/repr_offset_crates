@@ -24,7 +24,13 @@ travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 [features]
 default = ["derive"]
 
-testing = [ "priv_expensive_test" ]
+testing = [
+    "priv_expensive_test",
+    "for_examples",
+]
+
+# Enables the for_examples module, with types used in examples.
+for_examples = []
 
 priv_expensive_test = []
 

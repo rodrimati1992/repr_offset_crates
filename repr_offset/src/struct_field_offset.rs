@@ -233,6 +233,38 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// - The `A` type parameter must be [`Unaligned`]
     /// if the field [is unaligned](#alignment-guidelines) inside the `S` struct
     /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
+    ///
+    /// # Example
+    ///
+    /// Constructing the `FieldOffset`s of a packed struct.
+    ///
+    /// ```rust
+    /// use repr_offset::{FieldOffset, Unaligned};
+    ///
+    /// let this = Packed{ x: 3, y: 5, z: "huh" };
+    ///
+    /// assert_eq!( OFFSET_X.get_copy(&this), 3 );
+    /// assert_eq!( OFFSET_Y.get_copy(&this), 5 );
+    /// assert_eq!( OFFSET_Z.get_copy(&this), "huh" );
+    ///
+    /// #[repr(C, packed)]
+    /// struct Packed{
+    ///     x: u8,
+    ///     y: u32,
+    ///     z: &'static str,
+    /// }
+    ///
+    /// const OFFSET_X: FieldOffset<Packed, u8, Unaligned> = unsafe{
+    ///     FieldOffset::new(0)
+    /// };
+    /// const OFFSET_Y: FieldOffset<Packed, u32, Unaligned> = unsafe{
+    ///     OFFSET_X.next_field_offset()
+    /// };
+    /// const OFFSET_Z: FieldOffset<Packed, &'static str, Unaligned> = unsafe{
+    ///     OFFSET_Y.next_field_offset()
+    /// };
+    ///
+    /// ```
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
         Self {

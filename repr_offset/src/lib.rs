@@ -162,6 +162,25 @@ pub mod offset_calc;
 
 mod alignment;
 
+/// Types used for examples,
+///
+/// These are in the docs purely so that documentation examples only use
+/// types that are documented.
+///
+/// You can only use items from this module when the "for_examples" feature is enabled.
+pub mod for_examples {
+    #[doc(inline)]
+    pub use crate::for_examples_inner::*;
+}
+
+#[doc(hidden)]
+#[cfg(any(feature = "for_examples", all(rust_1_41, doc)))]
+pub mod for_examples_inner;
+
+#[doc(hidden)]
+#[cfg(not(any(feature = "for_examples", all(rust_1_41, doc))))]
+pub mod for_examples_inner {}
+
 mod struct_field_offset;
 
 mod utils;

@@ -32,8 +32,12 @@ This library is unconditionally `#![no_std]`,and that is unlikely to change in t
 
 # Minimum Rust version
 
-This crate support Rust back to 1.34.0
-(compiling the `repr_offset` tests on Rust 1.33.0 results in an internal compiler error).
+This crate support Rust back to 1.34.0 with only documentation tests,
+and back to 1.38.0 with all the tests.
+
+For some reason, compiling all the tests in Rust versions before 1.38.0 causes the
+compiler to use an unbounded amount of memory, or overflow the stack.
+(depending on the compiler version).
 
 # License
 

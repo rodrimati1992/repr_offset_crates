@@ -292,6 +292,39 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// - `NextA` must be [`Unaligned`] if the field is unaligned,
     /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
+    ///
+    /// # Example
+    ///
+    /// Constructing the `FieldOffset`s of a `#[repr(C, align(16))]` struct.
+    ///
+    /// ```rust
+    /// use repr_offset::{Aligned, FieldOffset};
+    ///
+    /// let this = ReprAligned{ foo: true, bar: Some('8'), baz: 55 };
+    ///
+    /// assert_eq!( OFFSET_FOO.get_copy(&this), true );
+    /// assert_eq!( OFFSET_BAR.get_copy(&this), Some('8') );
+    /// assert_eq!( OFFSET_BAZ.get_copy(&this), 55 );
+    ///
+    ///
+    /// #[repr(C, align(16))]
+    /// struct ReprAligned{
+    ///     foo: bool,
+    ///     bar: Option<char>,
+    ///     baz: u64,
+    /// }
+    ///
+    /// const OFFSET_FOO: FieldOffset<ReprAligned, bool, Aligned> = unsafe{
+    ///     FieldOffset::new(0)
+    /// };
+    /// const OFFSET_BAR: FieldOffset<ReprAligned, Option<char>, Aligned> = unsafe{
+    ///     OFFSET_FOO.next_field_offset()
+    /// };
+    /// const OFFSET_BAZ: FieldOffset<ReprAligned, u64, Aligned> = unsafe{
+    ///     OFFSET_BAR.next_field_offset()
+    /// };
+    ///
+    /// ```
     pub const unsafe fn next_field_offset<Next, NextA>(self) -> FieldOffset<S, Next, NextA> {
         let offset = GetNextFieldOffset {
             previous_offset: self.offset,
@@ -313,6 +346,38 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     /// Note that the resulting `FieldOffset` has the
     /// alignment type parameter (the third one) of `other`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::{Aligned, FieldOffset, Unaligned};
+    /// use repr_offset::for_examples::{ReprC, ReprPacked};
+    ///
+    /// type This = ReprC<char, ReprC<u8, u16>, ReprPacked<u32, u64>>;
+    ///
+    /// let this: This = ReprC {
+    ///     a: '3',
+    ///     b: ReprC{ a: 5u8, b: 8u16, c: (), d: () },
+    ///     c: ReprPacked{ a: 13u32, b: 21u64, c: (), d: () },
+    ///     d: (),
+    /// };
+    ///
+    /// assert_eq!( OFFSET_B_A.get_copy(&this), 5 );
+    /// assert_eq!( OFFSET_C_A.get_copy(&this), 13 );
+    ///
+    /// // This is the FieldOffset of the `.b.a` nested field.
+    /// const OFFSET_B_A: FieldOffset<This, u8, Aligned> =
+    ///     ReprC::OFFSET_B.add(ReprC::OFFSET_A);
+    ///
+    /// // This is the FieldOffset of the `.c.a` nested field.
+    /// //
+    /// // The alignment type parameter of the combined FieldOffset is`Unaligned` if
+    /// // either FieldOffset has an `Unaligned` type parameter.
+    /// const OFFSET_C_A: FieldOffset<This, u32, Unaligned> =
+    ///     ReprC::OFFSET_C.add(ReprPacked::OFFSET_A);
+    ///
+    /// ```
+    ///
     #[inline(always)]
     pub const fn add<F2, A2>(self, other: FieldOffset<F, F2, A2>) -> FieldOffset<S, F2, A2> {
         FieldOffset::priv_new(self.offset + other.offset)
@@ -321,6 +386,34 @@ impl<S, F> FieldOffset<S, F, Aligned> {
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Combines this `FieldOffset` with another one, to access a nested field.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::{FieldOffset, Unaligned};
+    /// use repr_offset::for_examples::{ReprC, ReprPacked};
+    ///
+    /// type This = ReprPacked<char, ReprC<u8, u16>, ReprPacked<u32, u64>>;
+    ///
+    /// let this: This = ReprPacked {
+    ///     a: '3',
+    ///     b: ReprC{ a: 34u8, b: 55u16, c: (), d: () },
+    ///     c: ReprPacked{ a: 89u32, b: 144u64, c: (), d: () },
+    ///     d: (),
+    /// };
+    ///
+    /// assert_eq!( OFFSET_B_A.get_copy(&this), 34 );
+    /// assert_eq!( OFFSET_C_A.get_copy(&this), 89 );
+    ///
+    /// // This is the FieldOffset of the `.b.a` nested field.
+    /// const OFFSET_B_A: FieldOffset<This, u8, Unaligned> =
+    ///     ReprPacked::OFFSET_B.add(ReprC::OFFSET_A);
+    ///
+    /// // This is the FieldOffset of the `.c.a` nested field.
+    /// const OFFSET_C_A: FieldOffset<This, u32, Unaligned> =
+    ///     ReprPacked::OFFSET_C.add(ReprPacked::OFFSET_A);
+    ///
+    /// ```
     ///
     #[inline(always)]
     pub const fn add<F2, A2>(self, other: FieldOffset<F, F2, A2>) -> FieldOffset<S, F2, Unaligned> {
@@ -345,6 +438,29 @@ where
 
 impl<S, F, A> FieldOffset<S, F, A> {
     /// The offset of the `F` field in the `S` struct.
+    ///
+    /// # Example
+    ///
+    /// This example demonstrates this method with a `#[repr(C, packed)]` struct.
+    ///
+    /// ```rust
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// type Normal = ReprPacked<u8, u16, u32, u64>;
+    /// type Reversed = ReprPacked<u64, u32, u16, u8>;
+    ///
+    /// assert_eq!( Normal::OFFSET_A.offset(), 0 );
+    /// assert_eq!( Normal::OFFSET_B.offset(), 1 );
+    /// assert_eq!( Normal::OFFSET_C.offset(), 3 );
+    /// assert_eq!( Normal::OFFSET_D.offset(), 7 );
+    ///
+    /// assert_eq!( Reversed::OFFSET_A.offset(), 0 );
+    /// assert_eq!( Reversed::OFFSET_B.offset(), 8 );
+    /// assert_eq!( Reversed::OFFSET_C.offset(), 12 );
+    /// assert_eq!( Reversed::OFFSET_D.offset(), 14 );
+    ///
+    ///
+    /// ```
     #[inline(always)]
     pub const fn offset(self) -> usize {
         self.offset
@@ -354,9 +470,44 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that there is a field of type `F` at the same offset
-    /// inside the `S2` struct
+    /// Callers must ensure that:
     ///
+    /// - There is a field of type `F` at the same offset inside the `S2` type
+    ///
+    /// - //TODO: describes the rules around field alignment and the alignment type parameter
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = Wrapper(ReprC{
+    ///     a: false,
+    ///     b: 3u8,
+    ///     c: Some('5'),
+    ///     d: [8u32, 13u32],
+    /// });
+    ///
+    /// assert_eq!( cast_offset(ReprC::OFFSET_A).get(&this), &false );
+    /// assert_eq!( cast_offset(ReprC::OFFSET_B).get(&this), &3u8 );
+    /// assert_eq!( cast_offset(ReprC::OFFSET_C).get(&this), &Some('5') );
+    /// assert_eq!( cast_offset(ReprC::OFFSET_D).get(&this), &[8u32, 13u32] );
+    ///
+    ///
+    /// #[repr(transparent)]
+    /// pub struct Wrapper<T>(pub T);
+    ///
+    /// pub const fn cast_offset<T,F,A>(offset: FieldOffset<T,F,A>) -> FieldOffset<Wrapper<T>,F,A>{
+    ///     // safety: This case is safe because this is a
+    ///     // `#[repr(transparent)]` wrapper around `T`
+    ///     unsafe{ offset.cast_struct() }
+    /// }
+    ///
+    ///
+    ///
+    /// ```
+    #[inline(always)]
     pub const unsafe fn cast_struct<S2>(self) -> FieldOffset<S2, F, A> {
         FieldOffset::new(self.offset)
     }
@@ -366,14 +517,67 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Safety
     ///
     /// Callers must ensure that the `F2` type is compatible with the `F` type.
+    /// This applies in both directions,
+    /// so values that are [safe and valid] in one must also be for the other.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    ///
+    /// use repr_offset::{Aligned, FieldOffset};
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// type This = ReprC<u8, u64, (), ()>;
+    ///
+    /// let this: This = ReprC{ a: 3, b: 5, c: (), d: () };
+    ///
+    /// unsafe{
+    ///     assert_eq!( This::OFFSET_A.cast_field::<i8>().get(&this), &3i8 );
+    ///     assert_eq!( This::OFFSET_B.cast_field::<i64>().get(&this), &5i64 );
+    /// }
+    ///
+    /// ```
+    /// [safe and valid]:
+    /// https://rust-lang.github.io/unsafe-code-guidelines/glossary.html#validity-and-safety-invariant
+    #[inline(always)]
     pub const unsafe fn cast_field<F2>(self) -> FieldOffset<S, F2, A> {
         FieldOffset::new(self.offset)
     }
 
     /// Changes this `FieldOffset` to be for a (potentially) unaligned field.
     ///
-    /// This is useful if you want to get a field from an unaligned pointer to a
+    /// This is useful if you want to get a nested field from an unaligned pointer to a
     /// `#[repr(C)]`/`#[repr(C,align())]` struct.
+    ///
+    /// # Example
+    ///
+    /// This example demonstrates how you can copy a field
+    /// from an unaligned pointer to a `#[repr(C)]` struct.
+    ///
+    /// ```rust
+    /// use repr_offset::for_examples::{ReprC, ReprPacked};
+    ///
+    /// type Inner = ReprC<usize, &'static str>;
+    /// type Outer = ReprPacked<u8, Inner>;
+    ///
+    /// let inner = ReprC { a: 3, b: "5", c: (), d: () };
+    /// let outer: Outer = ReprPacked{ a: 21, b: inner, c: (), d: () };
+    ///
+    /// let inner_ptr: *const Inner = Outer::OFFSET_B.get_ptr(&outer);
+    /// unsafe{
+    ///     assert_eq!( Inner::OFFSET_A.to_unaligned().read_copy(inner_ptr), 3 );
+    ///     assert_eq!( Inner::OFFSET_B.to_unaligned().read_copy(inner_ptr), "5" );
+    ///
+    ///     // This is undefined behavior,
+    ///     // because ReprC's FieldOFfsets require the pointer to be aligned.
+    ///     //
+    ///     // assert_eq!( Inner::OFFSET_A.read_copy(inner_ptr), 3 );
+    ///     // assert_eq!( Inner::OFFSET_B.read_copy(inner_ptr), "5" );
+    /// }
+    ///
+    /// ```
+    ///
+    #[inline(always)]
     pub const fn to_unaligned(self) -> FieldOffset<S, F, Unaligned> {
         FieldOffset {
             offset: self.offset,
@@ -388,6 +592,27 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Callers must ensure that [the field is aligned](#alignment-guidelines)
     /// within the `S` type.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::{Aligned, FieldOffset, Unaligned};
+    ///
+    /// // ReprPacked2 is aligned to 2 bytes.
+    /// use repr_offset::for_examples::ReprPacked2;
+    ///
+    /// type This = ReprPacked2<u8, u16, (), ()>;
+    ///
+    /// let _: FieldOffset<This, u8, Unaligned> = This::OFFSET_A;
+    /// let _: FieldOffset<This, u16, Unaligned> = This::OFFSET_B;
+    ///
+    /// let this: This = ReprPacked2{ a: 89, b: 144, c: (), d: () };
+    ///
+    /// unsafe{
+    ///     assert_eq!( This::OFFSET_A.to_aligned().get(&this), &89 );
+    ///     assert_eq!( This::OFFSET_B.to_aligned().get(&this), &144 );
+    /// }
+    /// ```
+    #[inline(always)]
     pub const unsafe fn to_aligned(self) -> FieldOffset<S, F, Aligned> {
         FieldOffset::new(self.offset)
     }
@@ -422,11 +647,26 @@ impl<S, F> FieldOffset<S, F, Aligned> {
 impl<S, F> FieldOffset<S, F, Aligned> {
     /// Copies the aligned field that this is an offset for.
     #[inline(always)]
-    pub fn get_copy(self, base: *const S) -> F
+    pub fn get_copy(self, base: &S) -> F
     where
         F: Copy,
     {
         unsafe { *get_ptr_method!(self, base, F) }
+    }
+
+    /// Copies the aligned field that this is an offset for.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html).
+    ///
+    #[inline(always)]
+    pub unsafe fn read_copy(self, base: *const S) -> F
+    where
+        F: Copy,
+    {
+        *get_ptr_method!(self, base, F)
     }
 
     /// Reads the value from the field in `source` without moving it.
@@ -554,11 +794,27 @@ impl<S, F> FieldOffset<S, F, Aligned> {
 impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Copies the unaligned field that this is an offset for.
     #[inline(always)]
-    pub fn get_copy(self, base: *const S) -> F
+    pub fn get_copy(self, base: &S) -> F
     where
         F: Copy,
     {
         unsafe { get_ptr_method!(self, base, F).read_unaligned() }
+    }
+
+    /// Copies the unaligned field that this is an offset for.
+    ///
+    /// # Safety
+    ///
+    /// This function has the same safety requirements as
+    /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html),
+    /// except that `dest` does not need to be properly aligned.
+    ///
+    #[inline(always)]
+    pub unsafe fn read_copy(self, base: *const S) -> F
+    where
+        F: Copy,
+    {
+        get_ptr_method!(self, base, F).read_unaligned()
     }
 
     /// Reads the value from the field in `source` without moving it.

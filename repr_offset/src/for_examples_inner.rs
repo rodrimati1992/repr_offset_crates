@@ -1,4 +1,4 @@
-use crate::{Aligned, FieldOffset, Unaligned};
+use crate::{Aligned, Unaligned};
 
 macro_rules! declare_example_struct {
     (
@@ -7,8 +7,8 @@ macro_rules! declare_example_struct {
         alignment =  $alignment:ty,
     ) => {
         $(#[$meta])*
-        #[derive(Debug,Default,PartialEq,Eq)]
-        pub struct $name<A,B,C,D>{
+        #[derive(Default)]
+        pub struct $name<A = (),B = (),C = (),D = ()>{
             pub a:A,
             pub b:B,
             pub c:C,
@@ -49,5 +49,12 @@ declare_example_struct! {
     /// An example `#[repr(C, packed)]` type
     #[repr(C, packed)]
     struct ReprPacked;
+    alignment = Unaligned,
+}
+
+declare_example_struct! {
+    /// An example `#[repr(C, packed(2))]` type.
+    #[repr(C, packed(2))]
+    struct ReprPacked2;
     alignment = Unaligned,
 }

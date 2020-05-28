@@ -124,3 +124,49 @@ fn accessing_nested_field_in_packed() {
         assert_eq!(NestedC::OFFSET_YEARS.to_unaligned().read(x_ptr), 13);
     }
 }
+
+#[test]
+fn to_unaligned_example() {
+    use repr_offset::for_examples::{ReprC, ReprPacked};
+
+    type Inner = ReprC<usize, &'static str>;
+    type Outer = ReprPacked<u8, Inner>;
+    let inner = ReprC {
+        a: 3,
+        b: "5",
+        c: (),
+        d: (),
+    };
+    let outer: Outer = ReprPacked {
+        a: 21,
+        b: inner,
+        c: (),
+        d: (),
+    };
+    let inner_ptr: *const Inner = Outer::OFFSET_B.get_ptr(&outer);
+    unsafe {
+        assert_eq!(Inner::OFFSET_A.to_unaligned().read_copy(inner_ptr), 3);
+        assert_eq!(Inner::OFFSET_B.to_unaligned().read_copy(inner_ptr), "5");
+    }
+}
+
+#[test]
+fn to_aligned_example() {
+    use repr_offset::for_examples::ReprPacked2;
+    use repr_offset::{FieldOffset, Unaligned};
+
+    type This = ReprPacked2<u8, u16, (), ()>;
+
+    let _: FieldOffset<This, u8, Unaligned> = This::OFFSET_A;
+    let _: FieldOffset<This, u16, Unaligned> = This::OFFSET_B;
+    let this: This = ReprPacked2 {
+        a: 89,
+        b: 144,
+        c: (),
+        d: (),
+    };
+    unsafe {
+        assert_eq!(This::OFFSET_A.to_aligned().get(&this), &89);
+        assert_eq!(This::OFFSET_B.to_aligned().get(&this), &144);
+    }
+}

@@ -17,14 +17,23 @@ fn access_aligned() {
         |var, other, off0, off1, off2, off3| unsafe{
             assert_eq!( off0.get(&var), &vec![0,1,2,3] );
             assert_eq!( off0.get_ptr(&var), off0.get(&var) as *const _ );
+            assert_eq!( off0.raw_get(&var), off0.get(&var) as *const _ );
+            assert_eq!( off0.wrapping_raw_get(&var), off0.get(&var) as *const _ );
             assert_eq!( off0.get_mut(&mut var), &mut vec![0,1,2,3] );
             assert_eq!( &mut *off0.get_mut_ptr(&mut var), &mut vec![0,1,2,3] );
+            assert_eq!( &mut *off0.raw_get_mut(&mut var), &mut vec![0,1,2,3] );
+            assert_eq!( &mut *off0.wrapping_raw_get_mut(&mut var), &mut vec![0,1,2,3] );
 
             assert_eq!( off1.get(&var), &Align16(5u8) );
             assert_eq!( &*off1.get_ptr(&var), off1.get(&var) );
+            assert_eq!( &*off1.raw_get(&var), off1.get(&var) );
+            assert_eq!( &*off1.wrapping_raw_get(&var), off1.get(&var) );
             assert_eq!( off1.get_mut(&mut var), &mut Align16(5u8) );
             assert_eq!( &mut *off1.get_mut_ptr(&mut var), &mut Align16(5u8) );
+            assert_eq!( &mut *off1.raw_get_mut(&mut var), &mut Align16(5u8) );
+            assert_eq!( &mut *off1.wrapping_raw_get_mut(&mut var), &mut Align16(5u8) );
             assert_eq!( off1.get_copy(&var), Align16(5u8) );
+            assert_eq!( off1.read_copy(&var), Align16(5u8) );
             assert_eq!( off1.read(&var), Align16(5u8) );
             off1.write(&mut var, Align16(8u8));
             assert_eq!( off1.read(&var), Align16(8u8) );
@@ -40,9 +49,14 @@ fn access_aligned() {
 
             assert_eq!( off2.get(&var), &16.0 );
             assert_eq!( off2.get_ptr(&var), off2.get(&var) as *const _ );
+            assert_eq!( off2.raw_get(&var), off2.get(&var) as *const _ );
+            assert_eq!( off2.wrapping_raw_get(&var), off2.get(&var) as *const _ );
             assert_eq!( off2.get_mut(&mut var), &mut 16.0 );
             assert_eq!( &mut *off2.get_mut_ptr(&mut var), &mut 16.0 );
+            assert_eq!( &mut *off2.raw_get_mut(&mut var), &mut 16.0 );
+            assert_eq!( &mut *off2.wrapping_raw_get_mut(&mut var), &mut 16.0 );
             assert_eq!( off2.get_copy(&var), 16.0 );
+            assert_eq!( off2.read_copy(&var), 16.0 );
             assert_eq!( off2.read(&var), 16.0 );
             off2.write(&mut var, 24.0);
             assert_eq!( off2.read(&var), 24.0 );
@@ -59,9 +73,14 @@ fn access_aligned() {
 
             assert_eq!( off3.get(&var), &[Align16(());0] );
             assert_eq!( off3.get_ptr(&var), off3.get(&var) as *const _ );
+            assert_eq!( off3.raw_get(&var), off3.get(&var) as *const _ );
+            assert_eq!( off3.wrapping_raw_get(&var), off3.get(&var) as *const _ );
             assert_eq!( off3.get_mut(&mut var), &mut [Align16(());0] );
             assert_eq!( &mut *off3.get_mut_ptr(&mut var), &mut [Align16(());0] );
+            assert_eq!( &mut *off3.raw_get_mut(&mut var), &mut [Align16(());0] );
+            assert_eq!( &mut *off3.wrapping_raw_get_mut(&mut var), &mut [Align16(());0] );
             assert_eq!( off3.get_copy(&var), [Align16(());0] );
+            assert_eq!( off3.read_copy(&var), [Align16(());0] );
 
         },
     }
@@ -104,6 +123,12 @@ fn access_aligned() {
             assert_eq!( off1_b.get_copy(&var), 5 );
             assert_eq!( off1_c.get_copy(&var), 8 );
             assert_eq!( off1_d.get_copy(&var), 13 );
+            unsafe{
+                assert_eq!( off1_a.read_copy(&var), 3 );
+                assert_eq!( off1_b.read_copy(&var), 5 );
+                assert_eq!( off1_c.read_copy(&var), 8 );
+                assert_eq!( off1_d.read_copy(&var), 13 );
+            }
 
             let off3_a: FieldOffset<_, u8, Unaligned> = off3.add(PackedConsts::OFFSET_A);
             let off3_b: FieldOffset<_, u16, Unaligned> = off3.add(PackedConsts::OFFSET_B);
@@ -114,7 +139,12 @@ fn access_aligned() {
             assert_eq!( off3_b.get_copy(&var), 34 );
             assert_eq!( off3_c.get_copy(&var), 55 );
             assert_eq!( off3_d.get_copy(&var), 89 );
-
+            unsafe{
+                assert_eq!( off3_a.read_copy(&var), 21 );
+                assert_eq!( off3_b.read_copy(&var), 34 );
+                assert_eq!( off3_c.read_copy(&var), 55 );
+                assert_eq!( off3_d.read_copy(&var), 89 );
+            }
         }
     }
 }

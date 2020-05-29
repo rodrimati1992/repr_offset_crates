@@ -204,7 +204,7 @@ impl<S, F, A> Clone for FieldOffset<S, F, A> {
 }
 
 // Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `get_ptr`
+// caused by delegating to `raw_get`
 macro_rules! get_ptr_method {
     ($self:ident, $base:expr, $F:ty) => {
         ($base as *const _ as *const u8).offset($self.offset as isize) as *const $F
@@ -212,7 +212,7 @@ macro_rules! get_ptr_method {
 }
 
 // Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `get_mut_ptr`
+// caused by delegating to `raw_get_mut`
 macro_rules! get_mut_ptr_method {
     ($self:ident, $base:expr, $F:ty) => {
         ($base as *mut _ as *mut u8).offset($self.offset as isize) as *mut $F
@@ -616,36 +616,58 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const unsafe fn to_aligned(self) -> FieldOffset<S, F, Aligned> {
         FieldOffset::new(self.offset)
     }
-
-    /// Gets a raw pointer to a field from a pointer to the `S` struct.
-    #[inline(always)]
-    pub fn get_ptr(self, base: *const S) -> *const F {
-        unsafe { get_ptr_method!(self, base, F) }
-    }
-
-    /// Gets a mutable raw pointer to a field from a pointer to the `S` struct.
-    #[inline(always)]
-    pub fn get_mut_ptr(self, base: *mut S) -> *mut F {
-        unsafe { get_mut_ptr_method!(self, base, F) }
-    }
 }
 
 impl<S, F> FieldOffset<S, F, Aligned> {
     /// Gets a reference to the field that this is an offset for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: '@', b: 21u8, c: (), d: () };
+    ///
+    /// assert_eq!( ReprC::OFFSET_A.get(&this), &'@' );
+    /// assert_eq!( ReprC::OFFSET_B.get(&this), &21u8 );
+    ///
+    /// ```
     #[inline(always)]
     pub fn get(self, base: &S) -> &F {
         unsafe { &*get_ptr_method!(self, base, F) }
     }
 
     /// Gets a mutable reference to the field that this is an offset for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: "what", b: '?', c: (), d: () };
+    ///
+    /// assert_eq!( ReprC::OFFSET_A.get_mut(&mut this), &mut "what" );
+    /// assert_eq!( ReprC::OFFSET_B.get_mut(&mut this), &mut '?' );
+    ///
+    /// ```
     #[inline(always)]
     pub fn get_mut(self, base: &mut S) -> &mut F {
         unsafe { &mut *get_mut_ptr_method!(self, base, F) }
     }
-}
 
-impl<S, F> FieldOffset<S, F, Aligned> {
     /// Copies the aligned field that this is an offset for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: Some(false), b: [8i32, 13, 21], c: (), d: () };
+    ///
+    /// assert_eq!( ReprC::OFFSET_A.get_copy(&this), Some(false) );
+    /// assert_eq!( ReprC::OFFSET_B.get_copy(&this), [8i32, 13, 21] );
+    ///
+    /// ```
     #[inline(always)]
     pub fn get_copy(self, base: &S) -> F
     where
@@ -653,7 +675,226 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     {
         unsafe { *get_ptr_method!(self, base, F) }
     }
+}
 
+impl<S, F, A> FieldOffset<S, F, A> {
+    /// Gets a raw pointer to a field from a reference to the `S` struct.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr_a = ReprPacked::OFFSET_A.get_ptr(&this);
+    /// // A `u8` is always aligned,so a `.read()` is fine.
+    /// assert_eq!( unsafe{ ptr_a.read() }, 3u8 );
+    ///
+    /// let ptr_b = ReprPacked::OFFSET_B.get_ptr(&this);
+    /// // ReprPacked has an alignment of 1,
+    /// // so this u16 field has to be copied with `.read_unaligned()`.
+    /// assert_eq!( unsafe{ ptr_b.read_unaligned() }, 5u16 );
+    ///
+    /// ```
+    #[inline(always)]
+    pub fn get_ptr(self, base: &S) -> *const F {
+        unsafe { get_ptr_method!(self, base, F) }
+    }
+
+    /// Gets a mutable raw pointer to a field from a mutable reference to the `S` struct.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let mut this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr_a = ReprPacked::OFFSET_A.get_mut_ptr(&mut this);
+    /// unsafe{
+    ///     // A `u8` is always aligned,so a `.read()` is fine.
+    ///     assert_eq!( ptr_a.read(), 3u8 );
+    ///     ptr_a.write(103);
+    ///     assert_eq!( ptr_a.read(), 103 );
+    /// }
+    ///
+    /// let ptr_b = ReprPacked::OFFSET_B.get_mut_ptr(&mut this);
+    /// unsafe{
+    ///     // ReprPacked has an alignment of 1,
+    ///     // so this u16 field has to be read with `.read_unaligned()`.
+    ///     assert_eq!( ptr_b.read_unaligned(), 5u16 );
+    ///     ptr_b.write_unaligned(105);
+    ///     assert_eq!( ptr_b.read_unaligned(), 105 );
+    /// }
+    ///
+    /// ```
+    #[inline(always)]
+    pub fn get_mut_ptr(self, base: &mut S) -> *mut F {
+        unsafe { get_mut_ptr_method!(self, base, F) }
+    }
+
+    /// Gets a raw pointer to a field from a pointer to the `S` struct.
+    ///
+    /// # Safety
+    ///
+    /// This has the same safety requirements as the [`<*const T>::offset`] method.
+    ///
+    /// [`<*const T>::offset`]:
+    /// https://doc.rust-lang.org/std/primitive.pointer.html#method.offset
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr: *const _ = &this;
+    ///
+    /// unsafe{
+    ///     // A `u8` is always aligned,so a `.read()` is fine.
+    ///     assert_eq!( ReprPacked::OFFSET_A.raw_get(ptr).read(), 3u8 );
+    ///     
+    ///     // ReprPacked has an alignment of 1,
+    ///     // so this u16 field has to be copied with `.read_unaligned()`.
+    ///     assert_eq!( ReprPacked::OFFSET_B.raw_get(ptr).read_unaligned(), 5u16 );
+    /// }
+    ///
+    /// ```
+    #[inline(always)]
+    pub unsafe fn raw_get(self, base: *const S) -> *const F {
+        get_ptr_method!(self, base, F)
+    }
+
+    /// Gets a mutable raw pointer to a field from a pointer to the `S` struct.
+    ///
+    /// # Safety
+    ///
+    /// This has the same safety requirements as the [`<*mut T>::offset`] method.
+    ///
+    /// [`<*mut T>::offset`]:
+    /// https://doc.rust-lang.org/std/primitive.pointer.html#method.offset-1
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let mut this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    ///
+    /// unsafe{
+    ///     let ptr_a = ReprPacked::OFFSET_A.raw_get_mut(ptr);
+    ///
+    ///     // A `u8` is always aligned,so a `.read()` is fine.
+    ///     assert_eq!( ptr_a.read(), 3u8 );
+    ///     ptr_a.write(103);
+    ///     assert_eq!( ptr_a.read(), 103 );
+    ///
+    ///
+    ///     let ptr_b = ReprPacked::OFFSET_B.raw_get_mut(ptr);
+    ///
+    ///     // ReprPacked has an alignment of 1,
+    ///     // so this u16 field has to be read with `.read_unaligned()`.
+    ///     assert_eq!( ptr_b.read_unaligned(), 5u16 );
+    ///     ptr_b.write_unaligned(105);
+    ///     assert_eq!( ptr_b.read_unaligned(), 105 );
+    /// }
+    ///
+    /// ```
+    #[inline(always)]
+    pub unsafe fn raw_get_mut(self, base: *mut S) -> *mut F {
+        get_mut_ptr_method!(self, base, F)
+    }
+
+    /// Gets a raw pointer to a field from a pointer to the `S` struct.
+    ///
+    /// # Safety
+    ///
+    /// While calling this method is not by itself unsafe,
+    /// using the pointer returned by this method has the same safety requirements
+    /// as the [`<*const T>::wrapping_offset`] method.
+    ///
+    /// [`<*const T>::wrapping_offset`]:
+    /// https://doc.rust-lang.org/std/primitive.pointer.html#method.wrapping_offset
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr_a = ReprPacked::OFFSET_A.wrapping_raw_get(&this);
+    /// // A `u8` is always aligned,so a `.read()` is fine.
+    /// assert_eq!( unsafe{ ptr_a.read() }, 3u8 );
+    ///
+    /// let ptr_b = ReprPacked::OFFSET_B.wrapping_raw_get(&this);
+    /// // ReprPacked has an alignment of 1,
+    /// // so this u16 field has to be copied with `.read_unaligned()`.
+    /// assert_eq!( unsafe{ ptr_b.read_unaligned() }, 5u16 );
+    ///
+    /// ```
+    #[inline(always)]
+    pub fn wrapping_raw_get(self, base: *const S) -> *const F {
+        (base as *const u8).wrapping_offset(self.offset as isize) as *const F
+    }
+
+    /// Gets a mutable raw pointer to a field from a pointer to the `S` struct.
+    ///
+    /// # Safety
+    ///
+    /// While calling this method is not by itself unsafe,
+    /// using the pointer returned by this method has the same safety requirements
+    /// as the [`<*mut T>::wrapping_offset`] method.
+    ///
+    /// [`<*mut T>::wrapping_offset`]:
+    /// https://doc.rust-lang.org/std/primitive.pointer.html#method.wrapping_offset-1
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// use repr_offset::FieldOffset;
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let mut this = ReprPacked{ a: 3u8, b: 5u16, c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    ///
+    /// let ptr_a = ReprPacked::OFFSET_A.wrapping_raw_get_mut(ptr);
+    /// unsafe{
+    ///
+    ///     // A `u8` is always aligned,so a `.read()` is fine.
+    ///     assert_eq!( ptr_a.read(), 3u8 );
+    ///     ptr_a.write(103);
+    ///     assert_eq!( ptr_a.read(), 103 );
+    /// }
+    ///
+    /// let ptr_b = ReprPacked::OFFSET_B.wrapping_raw_get_mut(ptr);
+    /// unsafe{
+    ///
+    ///     // ReprPacked has an alignment of 1,
+    ///     // so this u16 field has to be read with `.read_unaligned()`.
+    ///     assert_eq!( ptr_b.read_unaligned(), 5u16 );
+    ///     ptr_b.write_unaligned(105);
+    ///     assert_eq!( ptr_b.read_unaligned(), 105 );
+    /// }
+    ///
+    /// ```
+    #[inline(always)]
+    pub fn wrapping_raw_get_mut(self, base: *mut S) -> *mut F {
+        (base as *mut u8).wrapping_offset(self.offset as isize) as *mut F
+    }
+}
+
+impl<S, F> FieldOffset<S, F, Aligned> {
     /// Copies the aligned field that this is an offset for.
     ///
     /// # Safety
@@ -806,8 +1047,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Safety
     ///
     /// This function has the same safety requirements as
-    /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html),
-    /// except that `dest` does not need to be properly aligned.
+    /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
     #[inline(always)]
     pub unsafe fn read_copy(self, base: *const S) -> F
@@ -822,8 +1062,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Safety
     ///
     /// This function has the same safety requirements as
-    /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html),
-    /// except that `dest` does not need to be properly aligned.
+    /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {

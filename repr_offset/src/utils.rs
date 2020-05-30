@@ -1,11 +1,45 @@
+/// A helper function to force a variable to move (copy if it's a Copy type).
+///
+/// # Example
+///
+/// ```rust
+/// use repr_offset::utils::moved;
+///
+/// #[repr(C, packed)]
+/// struct Packed{
+///     foo: usize,
+///     bar: u64,
+/// }
+///
+/// let this = Packed{ foo: 21, bar: 34 };
+///
+/// assert_eq!( moved(this.foo), 21 );
+/// assert_eq!( moved(this.bar), 34 );
+///
+/// // The code below causes undefined behavior because:
+/// // -`assert_eq` borrows the operands implicitly.
+/// // - Fields of `#[repr(C, packed)]` structs create unaligned references when borrowed.
+/// // - Unaligned references are undefined behavior.
+/// //
+/// // unsafe{
+/// //      assert_eq!( this.foo, 21 );
+/// //      assert_eq!( this.bar, 34 );
+/// // }
+///
+/// ```
+#[inline(always)]
+pub const fn moved<T>(val: T) -> T {
+    val
+}
+
 /// A const-equivalent of `core::cmp::min::<usize>`
-pub const fn min_usize(l: usize, r: usize) -> usize {
+pub(crate) const fn min_usize(l: usize, r: usize) -> usize {
     let mask_r = ((l < r) as usize).wrapping_sub(1);
     (r & mask_r) | (l & !mask_r)
 }
 
 /// Helper type with associated constants for `core::mem` functions (and a few more).
-pub struct Mem<T>(T);
+pub(crate) struct Mem<T>(T);
 
 impl<T> Mem<T> {
     /// Equivalent to `core::mem::size_of`.

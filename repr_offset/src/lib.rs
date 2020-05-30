@@ -183,7 +183,7 @@ pub mod for_examples_inner {}
 
 mod struct_field_offset;
 
-mod utils;
+pub mod utils;
 
 #[cfg(feature = "testing")]
 pub mod types_for_tests;

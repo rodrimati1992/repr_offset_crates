@@ -53,7 +53,7 @@ use core::{
 /// so `FieldOffset<S, F, Unaligned>`(as opposed to `FieldOffset<S, F, Aligned>`)
 /// is safest when `S` is a `#[repr(C, packed)]` type.
 ///
-/// A nested field is unaligned if any field in the chain to access the
+/// A nested field is unaligned if any field in the chain of field accesses to the
 /// nested field (ie: `foo` and `bar` and `baz` in `foo.bar.baz`)
 /// is unaligned according to the rules for non-nested fields described in this section.
 ///
@@ -68,9 +68,11 @@ use core::{
 /// to construct the constants more conveniently (and in a less error-prone way).
 ///
 /// ```rust
+/// # #![deny(safe_packed_borrows)]
 /// use repr_offset::{Aligned, FieldOffset};
 ///
 /// use std::mem;
+///
 ///
 /// fn main(){
 ///     let mut foo = Foo{ first: 3u16, second: 5, third: None };
@@ -111,6 +113,7 @@ use core::{
 /// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct.
 ///
 /// ```rust
+/// # #![deny(safe_packed_borrows)]
 #[cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
 #[cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
 /// use repr_offset::{Aligned, FieldOffset, Unaligned};
@@ -137,7 +140,7 @@ use core::{
 /// // As you can see `FieldOffset::add` combines two offsets,
 /// // allowing you to access a nested field with a single `FieldOffset`.
 /// //
-/// // These `FieldOffset`s have an `Unaligned` type parameter because
+/// // These `FieldOffset`s have an `Unaligned` type argument because
 /// // OFFY is a `FieldOffset<_, _, Unaligned>`.
 /// const OFF_NAME: FieldOffset<Pack, &'static str, Unaligned> = OFFY.add(NestedC::OFFSET_NAME);
 /// const OFF_YEARS: FieldOffset<Pack, usize, Unaligned> = OFFY.add(NestedC::OFFSET_YEARS);
@@ -231,7 +234,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
     /// - The `A` type parameter must be [`Unaligned`]
-    /// if the field [is unaligned](#alignment-guidelines) inside the `S` struct
+    /// if the field [is unaligned](#alignment-guidelines),
     /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
     ///
     /// # Example
@@ -239,6 +242,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Constructing the `FieldOffset`s of a packed struct.
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::{FieldOffset, Unaligned};
     ///
     /// let this = Packed{ x: 3, y: 5, z: "huh" };
@@ -254,7 +258,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///     z: &'static str,
     /// }
     ///
-    /// const OFFSET_X: FieldOffset<Packed, u8, Unaligned> = unsafe{
+    /// // `u8` is always aligned.
+    /// const OFFSET_X: FieldOffset<Packed, u8, Aligned> = unsafe{
     ///     FieldOffset::new(0)
     /// };
     /// const OFFSET_Y: FieldOffset<Packed, u32, Unaligned> = unsafe{
@@ -290,7 +295,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// - `Next` is the type of the field after the one that this is an offset for.
     ///
-    /// - `NextA` must be [`Unaligned`] if the field is unaligned,
+    /// - `NextA` must be [`Unaligned`] if the field [is unaligned](#alignment-guidelines),
     /// or [`Aligned`] if [it is aligned](#alignment-guidelines).
     ///
     /// # Example
@@ -298,6 +303,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// Constructing the `FieldOffset`s of a `#[repr(C, align(16))]` struct.
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::{Aligned, FieldOffset};
     ///
     /// let this = ReprAligned{ foo: true, bar: Some('8'), baz: 55 };
@@ -350,6 +356,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::{Aligned, FieldOffset, Unaligned};
     /// use repr_offset::for_examples::{ReprC, ReprPacked};
     ///
@@ -390,6 +397,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::{FieldOffset, Unaligned};
     /// use repr_offset::for_examples::{ReprC, ReprPacked};
     ///
@@ -422,7 +430,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
 }
 
 /// Equivalent to the inherent `FieldOffset::add` method,
-/// which can be ran at compile-time.
+/// that one can be ran at compile-time(this one can't).
 impl<S, F, A, F2, A2> Add<FieldOffset<F, F2, A2>> for FieldOffset<S, F, A>
 where
     A: CombinePacking<A2>,
@@ -444,6 +452,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// This example demonstrates this method with a `#[repr(C, packed)]` struct.
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::for_examples::ReprPacked;
     ///
     /// type Normal = ReprPacked<u8, u16, u32, u64>;
@@ -470,15 +479,17 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that:
+    /// Callers must ensure that there is a field of type `F` at the same offset
+    /// inside the `S2` type,
+    /// and is at least as public as this `FieldOffset`.
     ///
-    /// - There is a field of type `F` at the same offset inside the `S2` type
-    ///
-    /// - //TODO: describes the rules around field alignment and the alignment type parameter
+    /// If the `A` type parameter is [`Aligned`],
+    /// then the field [must be aligned](#alignment-guidelines)
     ///
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprC;
     ///
@@ -501,6 +512,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// pub const fn cast_offset<T,F,A>(offset: FieldOffset<T,F,A>) -> FieldOffset<Wrapper<T>,F,A>{
     ///     // safety: This case is safe because this is a
     ///     // `#[repr(transparent)]` wrapper around `T`
+    ///     // where `T` is a public field in the wrapper
     ///     unsafe{ offset.cast_struct() }
     /// }
     ///
@@ -516,13 +528,15 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// # Safety
     ///
-    /// Callers must ensure that the `F2` type is compatible with the `F` type.
+    /// Callers must ensure that the `F2` type is compatible with the `F` type,
+    /// including size,alignment, and the invariants encoded by the type.
     /// This applies in both directions,
     /// so values that are [safe and valid] in one must also be for the other.
     ///
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     ///
     /// use repr_offset::{Aligned, FieldOffset};
     /// use repr_offset::for_examples::ReprC;
@@ -555,6 +569,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// from an unaligned pointer to a `#[repr(C)]` struct.
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::for_examples::{ReprC, ReprPacked};
     ///
     /// type Inner = ReprC<usize, &'static str>;
@@ -595,6 +610,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::{Aligned, FieldOffset, Unaligned};
     ///
     /// // ReprPacked2 is aligned to 2 bytes.
@@ -624,6 +640,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::for_examples::ReprC;
     ///
     /// let this = ReprC{ a: '@', b: 21u8, c: (), d: () };
@@ -642,6 +659,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::for_examples::ReprC;
     ///
     /// let mut this = ReprC{ a: "what", b: '?', c: (), d: () };
@@ -660,6 +678,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::for_examples::ReprC;
     ///
     /// let this = ReprC{ a: Some(false), b: [8i32, 13, 21], c: (), d: () };
@@ -683,6 +702,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -708,6 +728,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -748,6 +769,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -782,6 +804,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -827,6 +850,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -861,6 +885,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Example
     ///
     /// ```rust
+    /// # #![deny(safe_packed_borrows)]
     /// use repr_offset::FieldOffset;
     /// use repr_offset::for_examples::ReprPacked;
     ///
@@ -902,6 +927,20 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: 10u8, b: "20", c: (), d: () };
+    ///
+    /// let ptr: *const _ = &this;
+    /// unsafe{
+    ///     assert_eq!( ReprC::OFFSET_A.read_copy(ptr), 10u8 );
+    ///     assert_eq!( ReprC::OFFSET_B.read_copy(ptr), "20" );
+    /// }
+    /// ```
     #[inline(always)]
     pub unsafe fn read_copy(self, base: *const S) -> F
     where
@@ -917,21 +956,63 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// use std::mem::ManuallyDrop;
+    ///
+    /// let this = ManuallyDrop::new(ReprC{
+    ///     a: vec![0, 1, 2],
+    ///     b: "20".to_string(),
+    ///     c: (),
+    ///     d: (),
+    /// });
+    ///
+    /// let ptr: *const _ = &*this;
+    /// unsafe{
+    ///     assert_eq!( ReprC::OFFSET_A.read(ptr), vec![0, 1, 2] );
+    ///     assert_eq!( ReprC::OFFSET_B.read(ptr), "20".to_string() );
+    /// }
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
         get_ptr_method!(self, source, F).read()
     }
 
-    /// Writes `value` ìnto the field in `source` without dropping the old value of the field.
+    /// Writes `value` ìnto the field in `destination` without dropping the old value of the field.
+    ///
+    /// This allows uninitialized fields to be initialized,since doing
+    /// `*OFFSET_FOO.raw_get_mut(ptr) = value;` would drop uninitialized memory.
     ///
     /// # Safety
     ///
     /// This function has the same safety requirements as
     /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: 10u8, b: "20", c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    /// unsafe{
+    ///     ReprC::OFFSET_A.write(ptr, 13u8);
+    ///     ReprC::OFFSET_B.write(ptr, "21");
+    /// }
+    /// assert_eq!( this.a, 13u8 );
+    /// assert_eq!( this.b, "21" );
+    ///
+    /// ```
     #[inline(always)]
-    pub unsafe fn write(self, source: *mut S, value: F) {
-        get_mut_ptr_method!(self, source, F).write(value)
+    pub unsafe fn write(self, destination: *mut S, value: F) {
+        get_mut_ptr_method!(self, destination, F).write(value)
     }
 
     /// Copies the field in `source` into `destination`.
@@ -941,6 +1022,28 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: 10u8, b: "20", c: (), d: () };
+    /// let mut other = ReprC{ a: 0u8, b: "", c: (), d: () };
+    ///
+    /// let this_ptr: *const _ = &this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprC::OFFSET_A.copy(this_ptr, other_ptr);
+    ///     ReprC::OFFSET_B.copy(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( this.a, 10u8 );
+    /// assert_eq!( this.b, "20" );
+    ///
+    /// assert_eq!( other.a, 10u8 );
+    /// assert_eq!( other.b, "20" );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn copy(self, source: *const S, destination: *mut S) {
         core::ptr::copy(
@@ -959,6 +1062,28 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// [`std::ptr::copy_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: '#', b: 81, c: (), d: () };
+    /// let mut other = ReprC{ a: '_', b: 0, c: (), d: () };
+    ///
+    /// let this_ptr: *const _ = &this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprC::OFFSET_A.copy_nonoverlapping(this_ptr, other_ptr);
+    ///     ReprC::OFFSET_B.copy_nonoverlapping(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( this.a, '#' );
+    /// assert_eq!( this.b, 81 );
+    ///
+    /// assert_eq!( other.a, '#' );
+    /// assert_eq!( other.b, 81 );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
         core::ptr::copy_nonoverlapping(
@@ -968,7 +1093,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
         );
     }
 
-    /// Replaces the value of a field in `dest` with `value`,
+    /// Replaces the value of a field in `destination` with `value`,
     /// returning the old value of the field.
     ///
     /// # Safety
@@ -976,17 +1101,50 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::replace`](https://doc.rust-lang.org/std/ptr/fn.replace.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: [0u8, 1], b: false, c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    /// unsafe{
+    ///     assert_eq!( ReprC::OFFSET_A.replace(ptr, [2, 3]), [0u8, 1] );
+    ///     assert_eq!( ReprC::OFFSET_B.replace(ptr, true), false );
+    /// }
+    ///
+    /// assert_eq!( this.a, [2u8, 3] );
+    /// assert_eq!( this.b, true );
+    ///
+    /// ```
     #[inline(always)]
-    pub unsafe fn replace(self, dest: *mut S, value: F) -> F {
-        core::mem::replace(&mut *get_mut_ptr_method!(self, dest, F), value)
+    pub unsafe fn replace(self, destination: *mut S, value: F) -> F {
+        core::ptr::replace(get_mut_ptr_method!(self, destination, F), value)
     }
 
-    /// Replaces the value of a field in `dest` with `value`,
+    /// Replaces the value of a field in `destination` with `value`,
     /// returning the old value of the field.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: [0u8, 1], b: false, c: (), d: () };
+    ///
+    /// assert_eq!( ReprC::OFFSET_A.replace_mut(&mut this, [2, 3]), [0u8, 1] );
+    /// assert_eq!( ReprC::OFFSET_B.replace_mut(&mut this, true), false );
+    ///
+    /// assert_eq!( this.a, [2u8, 3] );
+    /// assert_eq!( this.b, true );
+    ///
+    /// ```
     #[inline(always)]
-    pub fn replace_mut(self, dest: &mut S, value: F) -> F {
-        unsafe { core::mem::replace(&mut *get_mut_ptr_method!(self, dest, F), value) }
+    pub fn replace_mut(self, destination: &mut S, value: F) -> F {
+        unsafe { core::mem::replace(&mut *get_mut_ptr_method!(self, destination, F), value) }
     }
 
     /// Swaps the values of a field between the `left` and `right` pointers.
@@ -996,9 +1154,31 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: '=', b: 64u16, c: (), d: () };
+    /// let mut other = ReprC{ a: '!', b: 255u16, c: (), d: () };
+    ///
+    /// let this_ptr: *mut _ = &mut this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprC::OFFSET_A.swap(this_ptr, other_ptr);
+    ///     ReprC::OFFSET_B.swap(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( this.a, '!' );
+    /// assert_eq!( this.b, 255 );
+    ///
+    /// assert_eq!( other.a, '=' );
+    /// assert_eq!( other.b, 64 );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn swap(self, left: *mut S, right: *mut S) {
-        core::ptr::swap(
+        core::ptr::swap::<F>(
             get_mut_ptr_method!(self, left, F),
             get_mut_ptr_method!(self, right, F),
         )
@@ -1012,15 +1192,60 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// [`std::ptr::swap_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: [false, true], b: &27u32, c: (), d: () };
+    /// let mut other = ReprC{ a: [true, false], b: &81u32, c: (), d: () };
+    ///
+    /// let this_ptr: *mut _ = &mut this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprC::OFFSET_A.swap_nonoverlapping(this_ptr, other_ptr);
+    ///     ReprC::OFFSET_B.swap_nonoverlapping(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( this.a, [true, false] );
+    /// assert_eq!( this.b, &81 );
+    ///
+    /// assert_eq!( other.a, [false, true] );
+    /// assert_eq!( other.b, &27 );
+    ///
+    /// ```
+    ///
     #[inline(always)]
     pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
-        core::ptr::swap(
+        core::ptr::swap_nonoverlapping::<F>(
             get_mut_ptr_method!(self, left, F),
             get_mut_ptr_method!(self, right, F),
+            1,
         )
     }
 
     /// Swaps the values of a field between `left` and `right`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let mut this = ReprC{ a: [true, true], b: 0x0Fu8, c: (), d: () };
+    /// let mut other = ReprC{ a: [false, false], b: 0xF0u8, c: (), d: () };
+    ///
+    /// ReprC::OFFSET_A.swap_mut(&mut this, &mut other);
+    /// ReprC::OFFSET_B.swap_mut(&mut this, &mut other);
+    ///
+    /// assert_eq!( this.a, [false, false] );
+    /// assert_eq!( this.b, 0xF0u8 );
+    ///
+    /// assert_eq!( other.a, [true, true] );
+    /// assert_eq!( other.b, 0x0Fu8 );
+    ///
+    /// ```
+    ///
     #[inline(always)]
     pub fn swap_mut(self, left: &mut S, right: &mut S) {
         unsafe {
@@ -1034,6 +1259,19 @@ impl<S, F> FieldOffset<S, F, Aligned> {
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Copies the unaligned field that this is an offset for.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: Some(false), b: [8i32, 13, 21], c: (), d: () };
+    ///
+    /// assert_eq!( ReprPacked::OFFSET_A.get_copy(&this), Some(false) );
+    /// assert_eq!( ReprPacked::OFFSET_B.get_copy(&this), [8i32, 13, 21] );
+    ///
+    /// ```
     #[inline(always)]
     pub fn get_copy(self, base: &S) -> F
     where
@@ -1049,6 +1287,20 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: 10u8, b: "20", c: (), d: () };
+    ///
+    /// let ptr: *const _ = &this;
+    /// unsafe{
+    ///     assert_eq!( ReprPacked::OFFSET_A.read_copy(ptr), 10u8 );
+    ///     assert_eq!( ReprPacked::OFFSET_B.read_copy(ptr), "20" );
+    /// }
+    /// ```
     #[inline(always)]
     pub unsafe fn read_copy(self, base: *const S) -> F
     where
@@ -1064,6 +1316,28 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// use std::mem::ManuallyDrop;
+    ///
+    /// let this = ManuallyDrop::new(ReprPacked{
+    ///     a: vec![0, 1, 2],
+    ///     b: "20".to_string(),
+    ///     c: (),
+    ///     d: (),
+    /// });
+    ///
+    /// let ptr: *const _ = &*this;
+    /// unsafe{
+    ///     assert_eq!( ReprPacked::OFFSET_A.read(ptr), vec![0, 1, 2] );
+    ///     assert_eq!( ReprPacked::OFFSET_B.read(ptr), "20".to_string() );
+    /// }
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
         get_ptr_method!(self, source, F).read_unaligned()
@@ -1074,8 +1348,27 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// # Safety
     ///
     /// This function has the same safety requirements as
-    /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
+    /// [`std::ptr::write_unaligned`](https://doc.rust-lang.org/std/ptr/fn.write_unaligned.html).
     ///
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: 10u8, b: "20", c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    /// unsafe{
+    ///     ReprPacked::OFFSET_A.write(ptr, 13u8);
+    ///     ReprPacked::OFFSET_B.write(ptr, "21");
+    /// }
+    /// assert_eq!( moved(this.a), 13u8 );
+    /// assert_eq!( moved(this.b), "21" );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn write(self, source: *mut S, value: F) {
         get_mut_ptr_method!(self, source, F).write_unaligned(value)
@@ -1087,8 +1380,32 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     /// This function has the same safety requirements as
     /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html),
-    /// except that `destination` does not need to be properly aligned.
+    /// except that `source` and `destination` do not need to be properly aligned.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    ///
+    /// let this = ReprPacked{ a: 10u8, b: "20", c: (), d: () };
+    /// let mut other = ReprPacked{ a: 0u8, b: "", c: (), d: () };
+    ///
+    /// let this_ptr: *const _ = &this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprPacked::OFFSET_A.copy(this_ptr, other_ptr);
+    ///     ReprPacked::OFFSET_B.copy(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( moved(this.a), 10u8 );
+    /// assert_eq!( moved(this.b), "20" );
+    ///
+    /// assert_eq!( moved(other.a), 10u8 );
+    /// assert_eq!( moved(other.b), "20" );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn copy(self, source: *const S, destination: *mut S) {
         core::ptr::copy(
@@ -1106,8 +1423,31 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::copy_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html),
-    /// except that `destination` does not need to be properly aligned.
+    /// except that `source` and `destination` do not need to be properly aligned.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let this = ReprPacked{ a: '#', b: 81, c: (), d: () };
+    /// let mut other = ReprPacked{ a: '_', b: 0, c: (), d: () };
+    ///
+    /// let this_ptr: *const _ = &this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprPacked::OFFSET_A.copy_nonoverlapping(this_ptr, other_ptr);
+    ///     ReprPacked::OFFSET_B.copy_nonoverlapping(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( moved(this.a), '#' );
+    /// assert_eq!( moved(this.b), 81 );
+    ///
+    /// assert_eq!( moved(other.a), '#' );
+    /// assert_eq!( moved(other.b), 81 );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
         core::ptr::copy_nonoverlapping(
@@ -1137,6 +1477,25 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// [`std::ptr::replace`](https://doc.rust-lang.org/std/ptr/fn.replace.html),
     /// except that `dest` does not need to be properly aligned.
     ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: [0u8, 1], b: false, c: (), d: () };
+    ///
+    /// let ptr: *mut _ = &mut this;
+    /// unsafe{
+    ///     assert_eq!( ReprPacked::OFFSET_A.replace(ptr, [2, 3]), [0u8, 1] );
+    ///     assert_eq!( ReprPacked::OFFSET_B.replace(ptr, true), false );
+    /// }
+    ///
+    /// assert_eq!( moved(this.a), [2u8, 3] );
+    /// assert_eq!( moved(this.b), true );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn replace(self, dest: *mut S, value: F) -> F {
         replace_unaligned!(self, dest, value, F)
@@ -1145,6 +1504,23 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// Replaces the value of a field in `dest` with `value`,
     /// returning the old value of the field.
     ///
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: [0u8, 1], b: false, c: (), d: () };
+    ///
+    /// assert_eq!( ReprPacked::OFFSET_A.replace_mut(&mut this, [2, 3]), [0u8, 1] );
+    /// assert_eq!( ReprPacked::OFFSET_B.replace_mut(&mut this, true), false );
+    ///
+    /// assert_eq!( moved(this.a), [2u8, 3] );
+    /// assert_eq!( moved(this.b), true );
+    ///
+    /// ```
     pub fn replace_mut(self, dest: &mut S, value: F) -> F {
         unsafe { replace_unaligned!(self, dest, value, F) }
     }
@@ -1171,7 +1547,31 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     /// This function has the same safety requirements as
     /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html),
-    /// except that it does not require an aligned pointer.
+    /// except that it does not require aligned pointers.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: '=', b: 64u16, c: (), d: () };
+    /// let mut other = ReprPacked{ a: '!', b: 255u16, c: (), d: () };
+    ///
+    /// let this_ptr: *mut _ = &mut this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprPacked::OFFSET_A.swap(this_ptr, other_ptr);
+    ///     ReprPacked::OFFSET_B.swap(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( moved(this.a), '!' );
+    /// assert_eq!( moved(this.b), 255 );
+    ///
+    /// assert_eq!( moved(other.a), '=' );
+    /// assert_eq!( moved(other.b), 64 );
+    ///
+    /// ```
     #[inline(always)]
     pub unsafe fn swap(self, left: *mut S, right: *mut S) {
         unaligned_swap!(self, left, right, core::ptr::copy, F)
@@ -1184,7 +1584,31 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::swap_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html)
-    /// except that it does not require an aligned pointer.
+    /// except that it does not require aligned pointers.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: [false, true], b: &27u32, c: (), d: () };
+    /// let mut other = ReprPacked{ a: [true, false], b: &81u32, c: (), d: () };
+    ///
+    /// let this_ptr: *mut _ = &mut this;
+    /// let other_ptr: *mut _ = &mut other;
+    /// unsafe{
+    ///     ReprPacked::OFFSET_A.swap_nonoverlapping(this_ptr, other_ptr);
+    ///     ReprPacked::OFFSET_B.swap_nonoverlapping(this_ptr, other_ptr);
+    /// }
+    /// assert_eq!( moved(this.a), [true, false] );
+    /// assert_eq!( moved(this.b), &81 );
+    ///
+    /// assert_eq!( moved(other.a), [false, true] );
+    /// assert_eq!( moved(other.b), &27 );
+    ///
+    /// ```
     ///
     #[inline(always)]
     pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
@@ -1192,6 +1616,28 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     }
 
     /// Swaps the values of a field between `left` and `right`.
+    ///
+    /// # Example
+    ///
+    /// ```rust
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    /// use repr_offset::utils::moved;
+    ///
+    /// let mut this = ReprPacked{ a: [true, true], b: 0x0Fu8, c: (), d: () };
+    /// let mut other = ReprPacked{ a: [false, false], b: 0xF0u8, c: (), d: () };
+    ///
+    /// ReprPacked::OFFSET_A.swap_mut(&mut this, &mut other);
+    /// ReprPacked::OFFSET_B.swap_mut(&mut this, &mut other);
+    ///
+    /// assert_eq!( moved(this.a), [false, false] );
+    /// assert_eq!( moved(this.b), 0xF0u8 );
+    ///
+    /// assert_eq!( moved(other.a), [true, true] );
+    /// assert_eq!( moved(other.b), 0x0Fu8 );
+    ///
+    /// ```
+    ///
     #[inline(always)]
     pub fn swap_mut(self, left: &mut S, right: &mut S) {
         // This function could probably be optimized.

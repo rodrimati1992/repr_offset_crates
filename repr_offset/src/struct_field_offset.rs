@@ -28,9 +28,11 @@ use core::{
 ///
 /// # Safety
 ///
-/// All the unsafe methods for `FieldOffset<_, _, Aligned>` require that
+/// All the unsafe methods for `FieldOffset<_, _, Aligned>`
+/// that move/copy the field require that
 /// the passed in pointers are aligned,
 /// while the ones for `FieldOffset<_, _, Unaligned>` do not.
+///
 ///
 /// Because passing unaligned pointers to `FieldOffset<_, _, Aligned>` methods
 /// causes undefined behavior,
@@ -243,7 +245,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// ```rust
     /// # #![deny(safe_packed_borrows)]
-    /// use repr_offset::{FieldOffset, Unaligned};
+    /// use repr_offset::{Aligned, FieldOffset, Unaligned};
     ///
     /// let this = Packed{ x: 3, y: 5, z: "huh" };
     ///
@@ -687,6 +689,16 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// assert_eq!( ReprC::OFFSET_B.get_copy(&this), [8i32, 13, 21] );
     ///
     /// ```
+    ///
+    /// This method can't be called for non-Copy fields.
+    /// ```compile_fail
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: vec![0, 1, 2, 3], b: (), c: (), d: () };
+    ///
+    /// let _ = ReprC::OFFSET_A.get_copy(&this);
+    /// ```
     #[inline(always)]
     pub fn get_copy(self, base: &S) -> F
     where
@@ -941,6 +953,18 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///     assert_eq!( ReprC::OFFSET_B.read_copy(ptr), "20" );
     /// }
     /// ```
+    ///
+    /// This method can't be called for non-Copy fields.
+    /// ```compile_fail
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprC;
+    ///
+    /// let this = ReprC{ a: vec![0, 1, 2, 3], b: (), c: (), d: () };
+    /// unsafe{
+    ///     let _ = ReprC::OFFSET_A.read_copy(&this);
+    /// }
+    /// ```
+    ///
     #[inline(always)]
     pub unsafe fn read_copy(self, base: *const S) -> F
     where
@@ -1272,6 +1296,17 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// assert_eq!( ReprPacked::OFFSET_B.get_copy(&this), [8i32, 13, 21] );
     ///
     /// ```
+    ///
+    /// This method can't be called for non-Copy fields.
+    /// ```compile_fail
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: vec![0, 1, 2], b: (), c: (), d: () };
+    ///
+    /// let _ = ReprPacked::OFFSET_A.get_copy(&this);
+    ///
+    /// ```
     #[inline(always)]
     pub fn get_copy(self, base: &S) -> F
     where
@@ -1299,6 +1334,18 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// unsafe{
     ///     assert_eq!( ReprPacked::OFFSET_A.read_copy(ptr), 10u8 );
     ///     assert_eq!( ReprPacked::OFFSET_B.read_copy(ptr), "20" );
+    /// }
+    /// ```
+    ///
+    /// This method can't be called for non-Copy fields.
+    /// ```compile_fail
+    /// # #![deny(safe_packed_borrows)]
+    /// use repr_offset::for_examples::ReprPacked;
+    ///
+    /// let this = ReprPacked{ a: vec![0, 1, 2], b: "20", c: (), d: () };
+    ///
+    /// unsafe{
+    ///     let _ = ReprPacked::OFFSET_A.read_copy(&this);
     /// }
     /// ```
     #[inline(always)]

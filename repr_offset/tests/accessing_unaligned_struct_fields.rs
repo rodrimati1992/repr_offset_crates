@@ -9,6 +9,8 @@ use repr_offset::{
     FieldOffset, Unaligned,
 };
 
+use std::{cmp::PartialEq, fmt::Debug, mem::ManuallyDrop};
+
 trait EnsureUncallable: Sized {
     fn get<T>(self, _: &T) -> &'static str {
         "nope"
@@ -20,23 +22,59 @@ trait EnsureUncallable: Sized {
 
 impl<This> EnsureUncallable for This {}
 
+fn nodrop_assert_eq<T>(left: T, right: T)
+where
+    T: Debug + PartialEq,
+{
+    let left = ManuallyDrop::new(left);
+    assert_eq!(&*left, &right);
+}
+
 #[test]
 fn access_unaligned() {
     _priv_run_with_types! {
         type_constructors[
             StructPacked, StructPacked2, StructPacked4, StructPacked8,StructPacked16,
         ],
-        ([3usize, 5, 8], Align16(5u8), 16.0_f64, [Align4(());0])
-        ([3usize, 5, 8], Align16(34u8), 16.0_f64, [Align4(());0])
-        |var, other, off0, off1, off2, off3| unsafe{
+        (vec![3usize, 5, 8], Align16(5u8), 16.0_f64, [Align4(());0])
+        (vec![13usize, 21, 34], Align16(34u8), 16.0_f64, [Align4(());0])
+        |var, other, off0, off1, off2, off3| {unsafe{
             assert_eq!( off0.get(&var), "nope");
             assert_eq!( off0.get_mut(&mut var), "nope");
-            assert_eq!( off0.get_ptr(&var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.raw_get(&var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.wrapping_raw_get(&var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.get_mut_ptr(&mut var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.raw_get_mut(&mut var).read_unaligned(), [3usize, 5, 8] );
-            assert_eq!( off0.wrapping_raw_get_mut(&mut var).read_unaligned(), [3usize, 5, 8] );
+            nodrop_assert_eq( off0.get_ptr(&var).read_unaligned(), vec![3usize, 5, 8] );
+            nodrop_assert_eq( off0.raw_get(&var).read_unaligned(), vec![3usize, 5, 8] );
+            nodrop_assert_eq( off0.get_mut_ptr(&mut var).read_unaligned(), vec![3usize, 5, 8] );
+            nodrop_assert_eq( off0.raw_get_mut(&mut var).read_unaligned(), vec![3usize, 5, 8] );
+            nodrop_assert_eq(
+                off0.wrapping_raw_get(&var).read_unaligned(),
+                vec![3usize, 5, 8],
+            );
+            nodrop_assert_eq(
+                off0.wrapping_raw_get_mut(&mut var).read_unaligned(),
+                vec![3usize, 5, 8],
+            );
+            {
+                let mut tmp0 = off0.read(&var);
+                assert_eq!( tmp0, vec![3, 5, 8] );
+                tmp0.push(13);
+                off0.write(&mut var, tmp0);
+                nodrop_assert_eq( off0.read(&var), vec![3, 5, 8, 13] );
+                off0.replace_mut(&mut var, vec![3, 5, 8]);
+            }
+            swap_tests!(
+                off0,
+                get_with = |off, v|{
+                    let mut _x = off0; _x = off;
+                    let tmp = ManuallyDrop::new(off.read(v));
+                    (*tmp).clone()
+                },
+                variables(var, other)
+                values(vec![3, 5, 8], vec![13, 21, 34])
+            );
+            assert_eq!( off0.replace(&mut var, vec![100, 101, 102]), vec![3usize, 5, 8] );
+            assert_eq!( off0.replace(&mut var, vec![200, 201, 202]), vec![100, 101, 102] );
+            assert_eq!( off0.replace_mut(&mut var, vec![300, 301, 302]), vec![200, 201, 202] );
+            assert_eq!( off0.replace_mut(&mut var, vec![400, 401, 402]), vec![300, 301, 302] );
 
             assert_eq!( off1.get(&var), "nope");
             assert_eq!( off1.get_mut(&mut var), "nope");
@@ -54,9 +92,15 @@ fn access_unaligned() {
             assert_eq!( off1.replace(&mut var, Align16(13u8)), Align16(8u8) );
             assert_eq!( off1.replace_mut(&mut var, Align16(21u8)), Align16(13u8) );
             assert_eq!( off1.read(&var), Align16(21u8) );
-            swap_tests!( off1, variables(var, other) values(Align16(21u8), Align16(34u8)) );
+            swap_tests!(
+                off1,
+                get_with = FieldOffset::<_,_,Unaligned>::get_copy,
+                variables(var, other)
+                values(Align16(21u8), Align16(34u8))
+            );
             copy_tests!(
                 off1,
+                get_with = FieldOffset::<_,_,Unaligned>::get_copy,
                 variables(var, other)
                 values(Align16(100u8), Align16(105u8), Align16(108u8))
             );
@@ -77,9 +121,15 @@ fn access_unaligned() {
             assert_eq!( off2.replace(&mut var, 25.0), 24.0 );
             assert_eq!( off2.replace_mut(&mut var, 26.0), 25.0 );
             assert_eq!( off2.read(&var), 26.0 );
-            swap_tests!( off2, variables(var, other) values(26.0, 16.0) );
+            swap_tests!(
+                off2,
+                get_with = FieldOffset::<_,_,Unaligned>::get_copy,
+                variables(var, other)
+                values(26.0, 16.0)
+            );
             copy_tests!(
                 off2,
+                get_with = FieldOffset::<_,_,Unaligned>::get_copy,
                 variables(var, other)
                 values(103.0, 105.0, 108.0)
             );
@@ -94,8 +144,7 @@ fn access_unaligned() {
             assert_eq!( off3.wrapping_raw_get_mut(&mut var).read_unaligned(), [Align4(());0] );
             assert_eq!( off3.get_copy(&var), [Align4(());0] );
             assert_eq!( off3.read_copy(&var), [Align4(());0] );
-
-        },
+        }}
     }
 
     type ReprCConsts = StructReprC<(), (u8, u16, u32, u64), (), ()>;

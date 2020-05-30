@@ -15,6 +15,26 @@ macro_rules! declare_example_struct {
             pub d:D,
         }
 
+        impl<A,B,C,D> Copy for $name<A,B,C,D>
+        where
+            A: Copy,
+            B: Copy,
+            C: Copy,
+            D: Copy,
+        {}
+
+        impl<A,B,C,D> Clone for $name<A,B,C,D>
+        where
+            A: Copy,
+            B: Copy,
+            C: Copy,
+            D: Copy,
+        {
+            fn clone(&self)->Self{
+                *self
+            }
+        }
+
         unsafe_struct_field_offsets!{
             alignment =  $alignment,
             impl[A,B,C,D] $name<A,B,C,D>{

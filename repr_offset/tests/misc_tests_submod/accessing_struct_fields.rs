@@ -12,17 +12,38 @@ use repr_offset::{
 fn access_aligned() {
     _priv_run_with_types! {
         type_constructors[ StructReprC, StructAlign2, StructAlign4, StructAlign8 ],
-        (vec![0,1,2,3], Align16(5u8), 16.0_f64, [Align16(());0])
-        (vec![0,1,2,3], Align16(34u8), 100.0_f64, [Align16(());0])
-        |var, other, off0, off1, off2, off3| unsafe{
-            assert_eq!( off0.get(&var), &vec![0,1,2,3] );
+        (vec![0, 1, 2, 3], Align16(5u8), 16.0_f64, [Align16(());0])
+        (vec![5, 8, 13, 21], Align16(34u8), 100.0_f64, [Align16(());0])
+        |var, other, off0, off1, off2, off3| {unsafe{
+            assert_eq!( off0.get(&var), &vec![0, 1, 2, 3] );
             assert_eq!( off0.get_ptr(&var), off0.get(&var) as *const _ );
             assert_eq!( off0.raw_get(&var), off0.get(&var) as *const _ );
             assert_eq!( off0.wrapping_raw_get(&var), off0.get(&var) as *const _ );
-            assert_eq!( off0.get_mut(&mut var), &mut vec![0,1,2,3] );
-            assert_eq!( &mut *off0.get_mut_ptr(&mut var), &mut vec![0,1,2,3] );
-            assert_eq!( &mut *off0.raw_get_mut(&mut var), &mut vec![0,1,2,3] );
-            assert_eq!( &mut *off0.wrapping_raw_get_mut(&mut var), &mut vec![0,1,2,3] );
+            assert_eq!( off0.get_mut(&mut var), &mut vec![0, 1, 2, 3] );
+            assert_eq!( &mut *off0.get_mut_ptr(&mut var), &mut vec![0, 1, 2, 3] );
+            assert_eq!( &mut *off0.raw_get_mut(&mut var), &mut vec![0, 1, 2, 3] );
+            assert_eq!( &mut *off0.wrapping_raw_get_mut(&mut var), &mut vec![0, 1, 2, 3] );
+            {
+                let mut tmp0 = off0.read(&var);
+                assert_eq!( tmp0, vec![0, 1, 2, 3] );
+                tmp0.push(13);
+                off0.write(&mut var, tmp0);
+                assert_eq!( off0.get(&var), &vec![0, 1, 2, 3, 13] );
+                off0.replace_mut(&mut var, vec![0, 1, 2, 3]);
+            }
+            swap_tests!(
+                off0,
+                get_with = |off, v|{
+                    let mut _x = off0; _x = off;
+                    off.get(v).clone()
+                },
+                variables(var, other)
+                values(vec![0, 1, 2, 3], vec![5, 8, 13, 21])
+            );
+            assert_eq!( off0.replace(&mut var, vec![100, 101, 102]), vec![0, 1, 2, 3] );
+            assert_eq!( off0.replace(&mut var, vec![200, 201, 202]), vec![100, 101, 102] );
+            assert_eq!( off0.replace_mut(&mut var, vec![300, 301, 302]), vec![200, 201, 202] );
+            assert_eq!( off0.replace_mut(&mut var, vec![400, 401, 402]), vec![300, 301, 302] );
 
             assert_eq!( off1.get(&var), &Align16(5u8) );
             assert_eq!( &*off1.get_ptr(&var), off1.get(&var) );
@@ -40,9 +61,15 @@ fn access_aligned() {
             assert_eq!( off1.replace(&mut var, Align16(13u8)), Align16(8u8) );
             assert_eq!( off1.replace_mut(&mut var, Align16(21u8)), Align16(13u8) );
             assert_eq!( off1.read(&var), Align16(21u8) );
-            swap_tests!( off1, variables(var, other) values(Align16(21u8), Align16(34u8)) );
+            swap_tests!(
+                off1,
+                get_with = FieldOffset::<_,_,Aligned>::get_copy,
+                variables(var, other)
+                values(Align16(21u8), Align16(34u8))
+            );
             copy_tests!(
                 off1,
+                get_with = FieldOffset::<_,_,Aligned>::get_copy,
                 variables(var, other)
                 values(Align16(100u8), Align16(105u8), Align16(108u8))
             );
@@ -63,9 +90,15 @@ fn access_aligned() {
             assert_eq!( off2.replace(&mut var, 25.0), 24.0 );
             assert_eq!( off2.replace_mut(&mut var, 26.0), 25.0 );
             assert_eq!( off2.read(&var), 26.0);
-            swap_tests!( off2, variables(var, other) values(26.0, 100.0) );
+            swap_tests!(
+                off2,
+                get_with = FieldOffset::<_,_,Aligned>::get_copy,
+                variables(var, other)
+                values(26.0, 100.0)
+            );
             copy_tests!(
                 off2,
+                get_with = FieldOffset::<_,_,Aligned>::get_copy,
                 variables(var, other)
                 values(103.0, 105.0, 108.0)
             );
@@ -81,8 +114,7 @@ fn access_aligned() {
             assert_eq!( &mut *off3.wrapping_raw_get_mut(&mut var), &mut [Align16(());0] );
             assert_eq!( off3.get_copy(&var), [Align16(());0] );
             assert_eq!( off3.read_copy(&var), [Align16(());0] );
-
-        },
+        }}
     }
 
     type ReprCConsts = StructReprC<(), (u8, u16, u32, u64), (), ()>;

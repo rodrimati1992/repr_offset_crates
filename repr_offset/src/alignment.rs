@@ -26,17 +26,24 @@ pub trait Alignment: Sealed {}
 impl Alignment for Aligned {}
 impl Alignment for Unaligned {}
 
-/// Combines two [`Alignment`] types.
+/// Combines two [`Alignment`] types,
+/// determines the return type of `FieldOffset + FieldOffset`.
 ///
 /// [`Alignment`]: ./trait.Alignment.html
+/// [`FieldOffset + FieldOffset`]: ./struct.FieldOffset.html#impl-Add<FieldOffset<F%2C F2%2C A2>>
 pub type CombinePackingOut<Lhs, Rhs> = <Lhs as CombinePacking<Rhs>>::Output;
 
-/// Trait that combines two [`Alignment`] types.
+/// Trait that combines two [`Alignment`] types,
+/// determines the return type of `FieldOffset + FieldOffset`.
+///
+/// [`Alignment`]: ./trait.Alignment.html
 pub trait CombinePacking<Rhs: Alignment>: Alignment {
     /// This is [`Aligned`] if both `Self` and the `Rhs` parameter are [`Aligned`],
     /// otherwise it is [`Unaligned`].
     ///
     /// [`Alignment`]: ./trait.Alignment.html
+    /// [`Aligned`]:  ./struct.Aligned.html
+    /// [`Unaligned`]: ./struct.Unaligned.html
     type Output: Alignment;
 }
 

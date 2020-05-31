@@ -2,7 +2,7 @@
 
 use crate::utils::{self, Mem};
 
-/// Calculates the offset of a field,given the previous field.
+/// Calculates the offset of a field in bytes,given the previous field.
 ///
 /// # Parameters
 ///
@@ -14,6 +14,24 @@ use crate::utils::{self, Mem};
 ///
 /// `previous_offset` is the offset in bytes of the previous field,of `Prev` type.
 ///
+/// # Example
+///
+/// ```
+/// use repr_offset::offset_calc::next_field_offset;
+///
+/// #[repr(C, packed)]
+/// struct Foo(u8, u16, u32, u64);
+///
+/// assert_eq!( OFFSET_1, 1 );
+/// assert_eq!( OFFSET_2, 3 );
+/// assert_eq!( OFFSET_3, 7 );
+///
+/// const OFFSET_0: usize = 0;
+/// const OFFSET_1: usize = next_field_offset::<Foo, u8, u16>(OFFSET_0);
+/// const OFFSET_2: usize = next_field_offset::<Foo, u16, u32>(OFFSET_1);
+/// const OFFSET_3: usize = next_field_offset::<Foo, u32, u64>(OFFSET_2);
+///
+/// ```
 #[inline(always)]
 pub const fn next_field_offset<Struct, Prev, Next>(previous_offset: usize) -> usize {
     GetNextFieldOffset {
@@ -26,6 +44,45 @@ pub const fn next_field_offset<Struct, Prev, Next>(previous_offset: usize) -> us
 }
 
 /// Calculates the offset (in bytes) of a field, with the `call` method.
+///
+/// # Example
+///
+/// ```
+/// use repr_offset::offset_calc::GetNextFieldOffset;
+///
+/// use std::mem;
+///
+/// #[repr(C, packed)]
+/// struct Foo(u8, u16, u32, u64);
+///
+/// assert_eq!( OFFSET_1, 1 );
+/// assert_eq!( OFFSET_2, 3 );
+/// assert_eq!( OFFSET_3, 7 );
+///
+/// const OFFSET_0: usize = 0;
+///
+/// const OFFSET_1: usize = GetNextFieldOffset{
+///     previous_offset: OFFSET_0,
+///     previous_size: mem::size_of::<u8>(),
+///     container_alignment: mem::align_of::<Foo>(),
+///     next_alignment: mem::align_of::<u16>(),
+/// }.call();
+///
+/// const OFFSET_2: usize = GetNextFieldOffset{
+///     previous_offset: OFFSET_1,
+///     previous_size: mem::size_of::<u16>(),
+///     container_alignment: mem::align_of::<Foo>(),
+///     next_alignment: mem::align_of::<u32>(),
+/// }.call();
+///
+/// const OFFSET_3: usize = GetNextFieldOffset{
+///     previous_offset: OFFSET_2,
+///     previous_size: mem::size_of::<u32>(),
+///     container_alignment: mem::align_of::<Foo>(),
+///     next_alignment: mem::align_of::<u64>(),
+/// }.call();
+///
+/// ```
 pub struct GetNextFieldOffset {
     /// The offset in bytes of the previous field.
     pub previous_offset: usize,

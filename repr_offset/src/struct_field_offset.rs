@@ -231,7 +231,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// Callers must ensure all of these:
     ///
-    /// - `S` must be a `#[repr(C)]` or `#[repr(transparent)]` struct.
+    /// - `S` must be a `#[repr(C)]` or `#[repr(transparent)]` struct
+    /// (optionally with `align` or `packed` attributes).
     ///
     /// - `offset` must be the byte offset of a field of type `F` inside the struct `S`.
     ///
@@ -272,6 +273,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// };
     ///
     /// ```
+    /// [`Aligned`]: ./struct.Aligned.html
+    /// [`Unaligned`]: ./struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
@@ -333,6 +336,9 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// };
     ///
     /// ```
+    ///
+    /// [`Aligned`]: ./struct.Aligned.html
+    /// [`Unaligned`]: ./struct.Unaligned.html
     pub const unsafe fn next_field_offset<Next, NextA>(self) -> FieldOffset<S, Next, NextA> {
         let offset = GetNextFieldOffset {
             previous_offset: self.offset,
@@ -381,7 +387,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// // This is the FieldOffset of the `.c.a` nested field.
     /// //
     /// // The alignment type parameter of the combined FieldOffset is`Unaligned` if
-    /// // either FieldOffset has an `Unaligned` type parameter.
+    /// // either FieldOffset has `Unaligned` as the `A` type parameter.
     /// const OFFSET_C_A: FieldOffset<This, u32, Unaligned> =
     ///     ReprC::OFFSET_C.add(ReprPacked::OFFSET_A);
     ///
@@ -433,6 +439,34 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
 
 /// Equivalent to the inherent `FieldOffset::add` method,
 /// that one can be ran at compile-time(this one can't).
+///
+/// # Example
+///
+/// ```rust
+/// # #![deny(safe_packed_borrows)]
+/// use repr_offset::{Aligned, FieldOffset, Unaligned};
+/// use repr_offset::for_examples::{ReprC, ReprPacked};
+///
+/// type This = ReprC<char, ReprC<u8, u16>, ReprPacked<u32, u64>>;
+///
+/// let this: This = ReprC {
+///     a: '3',
+///     b: ReprC{ a: 5u8, b: 8u16, c: (), d: () },
+///     c: ReprPacked{ a: 13u32, b: 21u64, c: (), d: () },
+///     d: (),
+/// };
+///
+/// // This is the FieldOffset of the `.b.a` nested field.
+/// let offset_b_a = ReprC::OFFSET_B + ReprC::OFFSET_B;
+///
+/// // This is the FieldOffset of the `.c.a` nested field.
+/// let offset_c_a = ReprC::OFFSET_C + ReprPacked::OFFSET_B;
+///
+/// assert_eq!( offset_b_a.get_copy(&this), 8 );
+/// assert_eq!( offset_c_a.get_copy(&this), 21 );
+///
+/// ```
+///
 impl<S, F, A, F2, A2> Add<FieldOffset<F, F2, A2>> for FieldOffset<S, F, A>
 where
     A: CombinePacking<A2>,
@@ -521,6 +555,9 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     ///
     /// ```
+    ///
+    /// [`Aligned`]: ./struct.Aligned.html
+    /// [`Unaligned`]: ./struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn cast_struct<S2>(self) -> FieldOffset<S2, F, A> {
         FieldOffset::new(self.offset)
@@ -531,9 +568,15 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// # Safety
     ///
     /// Callers must ensure that the `F2` type is compatible with the `F` type,
-    /// including size,alignment, and the invariants encoded by the type.
-    /// This applies in both directions,
-    /// so values that are [safe and valid] in one must also be for the other.
+    /// including size,alignment, and internal layout.
+    ///
+    /// If the `F` type encodes an invariant,
+    /// then callers must ensure that if the field is used as the `F` type
+    /// (including the destructor for the type)
+    /// that the invariants for that type must be upheld.
+    ///
+    /// The same applies if the field is used as the `F2` type
+    /// (if the returned FieldOffset isn't used,then it would not be used as the `F2` type)
     ///
     /// # Example
     ///

@@ -25,7 +25,7 @@ travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 default = ["derive"]
 
 testing = [
-    "priv_expensive_test",
+    # "priv_expensive_test",
     "for_examples",
 ]
 

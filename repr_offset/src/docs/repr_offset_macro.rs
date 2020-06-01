@@ -135,3 +135,80 @@
 //!
 //! [`FieldOffset`]: ../../struct.FieldOffset.html
 //!
+//!
+//! # Examples
+//!
+//! ### Out parameters
+//!
+//! This example demonstrates how you can write each field individually to an out parameter
+//! (a way that complex values can be returned in the C language).
+//!
+//! ```rust
+#![cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
+#![cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
+//!
+//! use std::ffi::CString;
+//! use std::os::raw::c_char;
+//!
+//! fn main(){
+//!     let mut results = Vec::<Fields>::with_capacity(3);
+//!
+//!     unsafe{
+//!         let ptr = results.as_mut_ptr();
+//!         assert_eq!( write_fields(10, 2, ptr.offset(0)), ErrorCode::Ok );
+//!         assert_eq!( write_fields(22, 3, ptr.offset(1)), ErrorCode::Ok );
+//!         assert_eq!( write_fields(1, 0, ptr.offset(2)), ErrorCode::DivisionByZero );
+//!         results.set_len(2);
+//!     }
+//!
+//!     assert_eq!( results[0].divided, 5 );
+//!     assert_eq!( results[1].divided, 7 );
+//! }
+//!
+//! #[no_mangle]
+//! pub unsafe extern fn write_fields(left: u32, right: u32, out: *mut Fields) -> ErrorCode {
+//!     let divided = match left.checked_div(right) {
+//!         Some(x) => x,
+//!         None => return ErrorCode::DivisionByZero,
+//!     };
+//!
+//!     let string= CString::new(divided.to_string())
+//!         .expect("There shouldn't be a nul byte in the string returned by `u32::to_string`")
+//!         .into_raw();
+//!
+//!     unsafe{
+//!         Fields::OFFSET_DIVIDED.write(out, divided);
+//!         Fields::OFFSET_STRING.write(out, string);
+//!     }
+//!
+//!     ErrorCode::Ok
+//! }
+//!
+//! #[no_mangle]
+//! pub unsafe extern fn cstring_free(ptr: *mut c_char) {
+//!     drop(CString::from_raw(ptr));
+//! }
+//!
+//! #[repr(C)]
+//! #[derive(Debug, ReprOffset)]
+//! pub struct Fields{
+//!     divided: u32,
+//!     string: *mut c_char,
+//! }
+//!
+//! impl Drop for Fields {
+//!     fn drop(&mut self) {
+//!         unsafe{ cstring_free(self.string); }
+//!     }
+//! }
+//!
+//! #[derive(Debug, PartialEq)]
+//! #[repr(u8)]
+//! pub enum ErrorCode{
+//!     Ok,
+//!     DivisionByZero,
+//! }
+//!
+//!
+//! ```
+//!

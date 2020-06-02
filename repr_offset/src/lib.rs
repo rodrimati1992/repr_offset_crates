@@ -188,6 +188,8 @@ pub mod utils;
 #[cfg(feature = "testing")]
 pub mod types_for_tests;
 
+/// This derive macro [is documented in here](./docs/repr_offset_macro/index.html)
+#[doc(inline)]
 #[cfg(feature = "derive")]
 pub use repr_offset_derive::ReprOffset;
 

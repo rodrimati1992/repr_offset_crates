@@ -147,7 +147,7 @@
 #![cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
 #![cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
 //!
-//! use std::ffi::CString;
+//! use std::ffi::{CStr, CString};
 //! use std::os::raw::c_char;
 //!
 //! fn main(){
@@ -159,10 +159,15 @@
 //!         assert_eq!( write_fields(22, 3, ptr.offset(1)), ErrorCode::Ok );
 //!         assert_eq!( write_fields(1, 0, ptr.offset(2)), ErrorCode::DivisionByZero );
 //!         results.set_len(2);
-//!     }
 //!
-//!     assert_eq!( results[0].divided, 5 );
-//!     assert_eq!( results[1].divided, 7 );
+//!         let cstr_as_str = |ptr| CStr::from_ptr(ptr).to_str().unwrap();
+//!
+//!         assert_eq!( results[0].divided, 5 );
+//!         assert_eq!( cstr_as_str(results[0].string), "5" );
+//!
+//!         assert_eq!( results[1].divided, 7 );
+//!         assert_eq!( cstr_as_str(results[1].string), "7" );
+//!     }
 //! }
 //!
 //! #[no_mangle]

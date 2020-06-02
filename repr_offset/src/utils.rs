@@ -1,3 +1,5 @@
+//! Miscelaneous functions.
+
 /// A helper function to force a variable to move (copy if it's a Copy type).
 ///
 /// # Example

@@ -482,7 +482,7 @@ where
 }
 
 impl<S, F, A> FieldOffset<S, F, A> {
-    /// The offset of the `F` field in the `S` struct.
+    /// The offset (in bytes) of the `F` field in the `S` struct.
     ///
     /// # Example
     ///

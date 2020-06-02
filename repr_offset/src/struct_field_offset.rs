@@ -28,11 +28,12 @@ use core::{
 ///
 /// # Safety
 ///
+/// ### Alignment
+///
 /// All the unsafe methods for `FieldOffset<_, _, Aligned>`
 /// that move/copy the field require that
 /// the passed in pointers are aligned,
 /// while the ones for `FieldOffset<_, _, Unaligned>` do not.
-///
 ///
 /// Because passing unaligned pointers to `FieldOffset<_, _, Aligned>` methods
 /// causes undefined behavior,
@@ -457,13 +458,13 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
 /// };
 ///
 /// // This is the FieldOffset of the `.b.a` nested field.
-/// let offset_b_a = ReprC::OFFSET_B + ReprC::OFFSET_B;
+/// let offset_b_b = ReprC::OFFSET_B + ReprC::OFFSET_B;
 ///
 /// // This is the FieldOffset of the `.c.a` nested field.
-/// let offset_c_a = ReprC::OFFSET_C + ReprPacked::OFFSET_B;
+/// let offset_c_b = ReprC::OFFSET_C + ReprPacked::OFFSET_B;
 ///
-/// assert_eq!( offset_b_a.get_copy(&this), 8 );
-/// assert_eq!( offset_c_a.get_copy(&this), 21 );
+/// assert_eq!( offset_b_b.get_copy(&this), 8 );
+/// assert_eq!( offset_c_b.get_copy(&this), 21 );
 ///
 /// ```
 ///
@@ -982,6 +983,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1023,6 +1027,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read`](https://doc.rust-lang.org/std/ptr/fn.read.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1060,6 +1067,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::write`](https://doc.rust-lang.org/std/ptr/fn.write.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1088,6 +1098,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     /// This function has the same safety requirements as
     /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html).
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1129,6 +1142,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// [`std::ptr::copy_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1167,6 +1183,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     /// This function has the same safety requirements as
     /// [`std::ptr::replace`](https://doc.rust-lang.org/std/ptr/fn.replace.html).
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1221,6 +1240,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1258,6 +1280,9 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::swap_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html).
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1365,6 +1390,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1406,6 +1434,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::read_unaligned`](https://doc.rust-lang.org/std/ptr/fn.read_unaligned.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1440,6 +1471,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::write_unaligned`](https://doc.rust-lang.org/std/ptr/fn.write_unaligned.html).
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     ///
     /// # Example
     ///
@@ -1471,6 +1505,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::copy`](https://doc.rust-lang.org/std/ptr/fn.copy.html),
     /// except that `source` and `destination` do not need to be properly aligned.
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1514,6 +1551,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// [`std::ptr::copy_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.copy_nonoverlapping.html),
     /// except that `source` and `destination` do not need to be properly aligned.
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1566,6 +1606,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// This function has the same safety requirements as
     /// [`std::ptr::replace`](https://doc.rust-lang.org/std/ptr/fn.replace.html),
     /// except that `dest` does not need to be properly aligned.
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///
@@ -1639,6 +1682,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// [`std::ptr::swap`](https://doc.rust-lang.org/std/ptr/fn.swap.html),
     /// except that it does not require aligned pointers.
     ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
+    ///
     /// # Example
     ///
     /// ```rust
@@ -1675,6 +1721,9 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// [`std::ptr::swap_nonoverlapping`
     /// ](https://doc.rust-lang.org/std/ptr/fn.swap_nonoverlapping.html)
     /// except that it does not require aligned pointers.
+    ///
+    /// Those safety requirements only apply to the field that this is an offset for,
+    /// fields after it or before it don't need to be valid to call this method.
     ///
     /// # Example
     ///

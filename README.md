@@ -8,14 +8,20 @@
 
 Currently only `#[repr(C)]`/`#[repr(C,packed)]`/`#[repr(C,align)]` structs are supported.
 
-# Features 
+# Features
 
 These are some of the features this library provides:
 
-- Computing the offsets of all the fields in a struct with the [`unsafe_struct_field_offsets`] macro.
+- The [`ReprOffset`] derive macro, which outputs associated constants with the
+offsets of fields.<br>
 
 - Using the [`FieldOffset`] type (how offsets are represented),
-to get a pointer (or reference) to a field from a pointer to the struct.
+with methods for operating on a field through a pointer to the struct,
+including getting a reference(or pointer) to the field.
+
+- Use the [`unsafe_struct_field_offsets`] macro as an alternative to the
+[`ReprOffset`] derive macro, most useful when the "derive" feature is disabled.
+
 
 # Examples 
 

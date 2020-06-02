@@ -75,24 +75,29 @@
 /// ### Unaligned struct example
 ///
 /// This demonstrates how you can get a pointer to a field from a pointer to
-/// a packed struct (it's UB to use references to fields here).
+/// a packed struct (it's UB to use references to fields here),
+/// as well as a `FieldOffset` method to replace packed fields.
 ///
 /// ```rust
 /// use repr_offset::{unsafe_struct_field_offsets, Unaligned};
 ///
 /// let mut bar = Bar{ mugs: 3, bottles: 5, table: "wooden".to_string() };
 ///
-/// assert_eq!( replace_table(&mut bar, "metallic".to_string()), "wooden".to_string());
-/// assert_eq!( replace_table(&mut bar, "granite".to_string()), "metallic".to_string());
-/// assert_eq!( replace_table(&mut bar, "carbonite".to_string()), "granite".to_string());
+/// assert_eq!( replace_table_a(&mut bar, "metallic".to_string()), "wooden".to_string());
+/// assert_eq!( replace_table_b(&mut bar, "granite".to_string()), "metallic".to_string());
+/// assert_eq!( replace_table_b(&mut bar, "carbonite".to_string()), "granite".to_string());
 ///
-/// fn replace_table(this: &mut Bar, replacement: String)-> String{
+/// fn replace_table_a(this: &mut Bar, replacement: String)-> String{
 ///     let ptr = Bar::OFFSET_TABLE.get_mut_ptr(this);
 ///     unsafe{
 ///         let taken = ptr.read_unaligned();
 ///         ptr.write_unaligned(replacement);
 ///         taken
 ///     }
+/// }
+///
+/// fn replace_table_b(this: &mut Bar, replacement: String)-> String{
+///     Bar::OFFSET_TABLE.replace_mut(this, replacement)
 /// }
 ///
 ///

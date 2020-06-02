@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/rodrimati1992/repr_offset_crates.svg?branch=master)](https://travis-ci.org/rodrimati1992/repr_offset_crates)
-[![](https://img.shields.io/crates/v/repr_offset.svg)][crates-io]
-[![](https://docs.rs/repr_offset/badge.svg)][api-docs]
+[![crates-io](https://img.shields.io/crates/v/repr_offset.svg)](https://crates.io/crates/repr_offset)
+[![api-docs](https://docs.rs/repr_offset/badge.svg)](https://docs.rs/repr_offset/0.0.1)
+
 
 
 `repr_offset` allows computing and safely using field offsets from types with a stable layout.

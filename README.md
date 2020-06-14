@@ -31,7 +31,7 @@ For **examples** you can look at
 
 # Future plans
 
-Adding a derive macro that does what `unsafe_struct_field_offsets` does.
+None for now.
 
 # Cargo features
 

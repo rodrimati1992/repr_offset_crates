@@ -24,7 +24,7 @@
 //!
 //! If you don't need the derive macro,
 //! you can disable the default feature in the Cargo.toml file with
-//! `repr_offset = { version = "....", default-feature = false }`,
+//! `repr_offset = { version = "....", default_features = false }`,
 //! making a clean compile of this crate take one to three seconds(depends on the machine).
 //!
 //! <span id="root-mod-examples"></span>
@@ -58,7 +58,7 @@
 //!     z: "oh,hi".to_string(),
 //! });
 //!
-//! let ptr = &mut *this;
+//! let ptr: *const Packed = &mut *this;
 //!
 //! unsafe{
 //!     assert_eq!( Packed::OFFSET_X.read(ptr), 5 );
@@ -142,6 +142,10 @@
 //!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
+#![deny(clippy::missing_safety_doc)]
+#![deny(clippy::shadow_unrelated)]
+#![deny(clippy::wildcard_imports)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
 pub extern crate self as repr_offset;

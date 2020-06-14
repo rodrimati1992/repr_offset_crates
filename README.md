@@ -33,6 +33,17 @@ For **examples** you can look at
 
 Adding a derive macro that does what `unsafe_struct_field_offsets` does.
 
+# Cargo features
+
+These are the cargo features in repr_offset:
+
+- `derive` (enabled by default): 
+Re-exports the `ReprOffset` derive macro from the `repr_offset_derive` crate.
+
+
+You can disable default features by using `default_features = false`,
+eg:`repr_offset = { version = "0.1", default_features = false }`.
+
 # no-std support
 
 This library is unconditionally `#![no_std]`,and that is unlikely to change in the future.

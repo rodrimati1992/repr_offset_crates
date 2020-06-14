@@ -1,3 +1,7 @@
+// All the uses of usize as isize are for struct offsets,
+// which as far as I am aware are all smaller than isize::MAX
+#![allow(clippy::ptr_offset_with_cast)]
+
 use crate::{
     offset_calc::GetNextFieldOffset,
     utils::{Mem, UnalignedMaybeUninit},

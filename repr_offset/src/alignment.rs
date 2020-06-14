@@ -7,7 +7,7 @@ pub struct Aligned;
 pub struct Unaligned;
 
 mod sealed {
-    use super::*;
+    use super::{Aligned, Unaligned};
     pub trait Sealed {}
 
     impl Sealed for Aligned {}

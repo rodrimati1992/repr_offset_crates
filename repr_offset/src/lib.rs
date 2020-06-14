@@ -6,14 +6,67 @@
 //!
 //! These are some of the features this library provides:
 //!
-//! - Computing the offsets of all the fields in a struct with the
-//! [`unsafe_struct_field_offsets`] macro.
+//! - The [`ReprOffset`] derive macro, which outputs associated constants with the
+//! offsets of fields.<br>
 //!
 //! - Using the [`FieldOffset`] type (how offsets are represented),
-//! to get a pointer (or reference) to a field from a pointer to the struct.
+//! with methods for operating on a field through a pointer to the struct,
+//! including getting a reference(or pointer) to the field.
+//!
+//! - Use the [`unsafe_struct_field_offsets`] macro as an alternative to the
+//! [`ReprOffset`] derive macro, most useful when the "derive" feature is disabled.
+//!
+//! # Dependencies
+//!
+//! This library re-exports the [`ReprOffset`] derive macro from the
+//! `repr_offset_derive` crate when the "derive" feature is enabled
+//! (it's enabled is the default).
+//!
+//! If you don't need the derive macro,
+//! you can disable the default feature in the Cargo.toml file with
+//! `repr_offset = { version = "....", default_features = false }`,
+//! making a clean compile of this crate take one to three seconds(depends on the machine).
 //!
 //! <span id="root-mod-examples"></span>
 //! # Examples
+//!
+//! ### Derivation
+//!
+//! This example demonstrates:
+//!
+//! - Deriving the field offset constants with the [`ReprOffset`] derive macro.
+//!
+//! - Moving out *unaligned* fields through a raw pointer.
+//!
+//! ```rust
+#![cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
+#![cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
+//!
+//! use std::mem::ManuallyDrop;
+//!
+//! #[repr(C, packed)]
+//! #[derive(ReprOffset)]
+//! struct Packed{
+//!     x: u8,
+//!     y: u64,
+//!     z: String,
+//! }
+//!
+//! let mut this = ManuallyDrop::new(Packed{
+//!     x: 5,
+//!     y: 8,
+//!     z: "oh,hi".to_string(),
+//! });
+//!
+//! let ptr: *mut Packed = &mut *this;
+//!
+//! unsafe{
+//!     assert_eq!( Packed::OFFSET_X.read(ptr), 5 );
+//!     assert_eq!( Packed::OFFSET_Y.read(ptr), 8 );
+//!     assert_eq!( Packed::OFFSET_Z.read(ptr), "oh,hi".to_string() );
+//! }
+//!
+//! ```
 //!
 //! ### Initialization
 //!
@@ -51,9 +104,9 @@
 //! /// Callers must pass a pointer to uninitialized memory with the
 //! /// size and alignment of `Foo`
 //! unsafe fn initialize_foo(this: *mut Foo){
-//!     Foo::OFFSET_NAME.get_raw_mut(this).write("foo".into());
-//!     Foo::OFFSET_X.get_raw_mut(this).write(13);
-//!     Foo::OFFSET_Y.get_raw_mut(this).write(21);
+//!     Foo::OFFSET_NAME.raw_get_mut(this).write("foo".into());
+//!     Foo::OFFSET_X.raw_get_mut(this).write(13);
+//!     Foo::OFFSET_Y.raw_get_mut(this).write(21);
 //! }
 //!
 //! #[repr(C)]
@@ -66,10 +119,10 @@
 //!
 //! // This macro is unsafe to invoke because you have to ensure that:
 //! // - All field types are listed,in declaration order.
-//! // - The `packing` parameter is `Packed` if the struct is `#[repr(C,packed)]`,
+//! // - The `alignment` parameter is `Unaligned` if the struct is `#[repr(C,packed)]`,
 //! //   and `Aligned` if it's not.
 //! unsafe_struct_field_offsets!{
-//!     packing = Aligned,
+//!     alignment =  Aligned,
 //!
 //!     impl[] Foo {
 //!         pub const OFFSET_NAME:String;
@@ -83,14 +136,22 @@
 //! ```
 //!
 //!
+//! [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 //! [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 //! [`FieldOffset`]: ./struct.FieldOffset.html
 //!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
+#![deny(clippy::missing_safety_doc)]
+#![deny(clippy::shadow_unrelated)]
+#![deny(clippy::wildcard_imports)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
-pub mod field_offset;
+pub extern crate self as repr_offset;
+
+#[macro_use]
+mod internal_macros;
 
 #[macro_use]
 mod macros;
@@ -99,16 +160,47 @@ mod macros;
 #[macro_use]
 mod test_macros;
 
-mod utils;
+pub mod docs;
 
-#[cfg(feature = "testing")]
-#[macro_use]
-pub mod tests;
+pub mod offset_calc;
+
+mod alignment;
+
+/// Types used for examples,
+///
+/// These are in the docs purely so that documentation examples only use
+/// types that are documented.
+///
+/// You can only use items from this module when the "for_examples" feature is enabled.
+pub mod for_examples {
+    #[doc(inline)]
+    pub use crate::for_examples_inner::*;
+}
+
+#[doc(hidden)]
+#[cfg(any(feature = "for_examples", all(rust_1_41, doc)))]
+pub mod for_examples_inner;
+
+#[doc(hidden)]
+#[cfg(not(any(feature = "for_examples", all(rust_1_41, doc))))]
+pub mod for_examples_inner {}
+
+mod struct_field_offset;
+
+pub mod utils;
 
 #[cfg(feature = "testing")]
 pub mod types_for_tests;
 
-pub use self::field_offset::{Aligned, FieldOffset, Packed};
+/// This derive macro [is documented in here](./docs/repr_offset_macro/index.html)
+#[doc(inline)]
+#[cfg(feature = "derive")]
+pub use repr_offset_derive::ReprOffset;
+
+pub use self::{
+    alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
+    struct_field_offset::FieldOffset,
+};
 
 #[cfg(all(test, not(feature = "testing")))]
 compile_error! { "tests must be run with the \"testing\" feature" }

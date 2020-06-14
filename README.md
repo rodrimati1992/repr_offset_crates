@@ -61,6 +61,9 @@ compiler to use an unbounded amount of memory, or overflow the stack.
 
 Licensed under the Zlib license
 
+[`ReprOffset`]:
+https://docs.rs/repr_offset/*/repr_offset/docs/repr_offset_macro/index.html
+
 [`unsafe_struct_field_offsets`]:
 https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_struct_field_offsets.html
 

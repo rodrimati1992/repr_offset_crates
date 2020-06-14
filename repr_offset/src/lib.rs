@@ -58,7 +58,7 @@
 //!     z: "oh,hi".to_string(),
 //! });
 //!
-//! let ptr: *const Packed = &mut *this;
+//! let ptr: *mut Packed = &mut *this;
 //!
 //! unsafe{
 //!     assert_eq!( Packed::OFFSET_X.read(ptr), 5 );

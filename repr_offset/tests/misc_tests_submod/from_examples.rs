@@ -201,10 +201,8 @@ pub unsafe extern "C" fn write_fields(left: u32, right: u32, out: *mut Fields) -
         .expect("There shouldn't be a nul byte in the string returned by `u32::to_sring`")
         .into_raw();
 
-    unsafe {
-        Fields::OFFSET_DIVIDED.write(out, divided);
-        Fields::OFFSET_STRING.write(out, string);
-    }
+    Fields::OFFSET_DIVIDED.write(out, divided);
+    Fields::OFFSET_STRING.write(out, string);
 
     ErrorCode::Ok
 }

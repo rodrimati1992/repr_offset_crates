@@ -1,3 +1,5 @@
+#![allow(missing_docs)]
+
 use crate::{Aligned, Unaligned};
 
 macro_rules! declare_example_struct {

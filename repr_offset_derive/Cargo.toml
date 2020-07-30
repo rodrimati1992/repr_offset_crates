@@ -1,6 +1,6 @@
 [package]
 name = "repr_offset_derive"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["rodrimati1992 <rodrimatt1985@gmail.com>"]
 edition = "2018"
 license = "Zlib"
@@ -28,7 +28,7 @@ testing=["as_derive_utils/testing"]
 
 [dependencies]
 core_extensions = {version="0.1.16", default_features = false}
-as_derive_utils = {version="0.8.2", default_features = false}
+as_derive_utils = {version="0.8.3", default_features = false}
 proc-macro2 = "1.0"
 quote = "1.0"
 syn = "1.0"

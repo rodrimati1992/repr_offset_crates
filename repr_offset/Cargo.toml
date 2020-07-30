@@ -1,6 +1,6 @@
 [package]
 name = "repr_offset"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["rodrimati1992 <rodrimatt1985@gmail.com>"]
 edition = "2018"
 license = "Zlib"
@@ -42,7 +42,7 @@ derive = ["repr_offset_derive"]
 test_nightly = ["testing","priv_raw_ref"]
 
 [dependencies]
-repr_offset_derive = {version = "0.1", path = "../repr_offset_derive", optional = true}
+repr_offset_derive = {version = "0.1.1", path = "../repr_offset_derive", optional = true}
 
 [dev-dependencies]
 repr_offset_derive = {version = "0.1", path = "../repr_offset_derive"}

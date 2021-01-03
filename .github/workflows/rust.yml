@@ -1,0 +1,71 @@
+name: Rust
+
+on: [push, pull_request]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      max-parallel: 2
+      matrix:
+        rust: [stable, beta, nightly, 1.34.0, 1.36.0, 1.38.0]
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: ci-all-versions
+      run: |
+        rustup override set ${{ matrix.rust }}
+
+        cargo update
+        cd "${{github.workspace}}/repr_offset_derive/"
+        cargo test --features testing
+
+        cd "${{github.workspace}}/repr_offset/"
+        cargo test --features "testing priv_expensive_test"
+        cargo test --no-default-features --features "testing priv_expensive_test derive"
+
+    - uses: actions/checkout@v2
+    - name: ci-msrv
+      if: ${{ matrix.rust == '1.34' || matrix.rust == '1.36' }}
+      run: |
+        cd "${{github.workspace}}/repr_offset/"
+        cargo test --doc --features testing
+        cargo test --doc --no-default-features --features "testing derive"
+
+
+    - uses: actions/checkout@v2
+    - name: ci-nighly
+      if: ${{ matrix.rust == 'nightly' && runner.os == 'Linux' }}
+      run: |
+        rustup override set ${{ matrix.rust }}
+
+        cargo update -Z minimal-versions
+        cd "${{github.workspace}}/repr_offset_derive/"
+        cargo build --tests --features testing
+        cd "${{github.workspace}}/repr_offset/"
+        cargo build --tests --features "testing priv_expensive_test derive"
+
+        cd "${{github.workspace}}/repr_offset/"
+
+        MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)
+        echo "Installing latest nightly with Miri"
+        echo "$MIRI_NIGHTLY"
+        rustup set profile minimal
+        rustup default "$MIRI_NIGHTLY"
+        rustup override set "$MIRI_NIGHTLY"
+        rustup component add miri
+        cargo miri setup
+
+        cargo test --no-default-features --features "test_nightly priv_expensive_test"
+        cargo test --no-default-features --features "test_nightly priv_expensive_test derive"
+        cargo test --no-default-features --features "testing priv_expensive_test derive"
+        
+        cargo clean 
+
+        cargo miri test --no-default-features --features "testing priv_expensive_test derive"
+        cargo miri test --no-default-features --features "test_nightly priv_expensive_test derive"

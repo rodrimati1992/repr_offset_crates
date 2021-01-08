@@ -1,5 +1,13 @@
 This is the changelog,summarising changes in each version(some minor changes may be ommited).
 
+# 0.1.2
+
+Changed CI to use github actions, updating readme to reflect that.
+
+# 0.1.1
+
+Worked around compilation error in beta and nighly channels by updating the minimum version for `as_derive_utils` dependency.
+
 # 0.1.0
 
 - Created the `repr_offset` crate and `repr_offset_derive` proc macro crate.

@@ -155,7 +155,7 @@ fn parse_attr_list<'a>(
             parse_sabi_attr(this, pctx, attr).combine_into_err(&mut this.errors);
             Ok(())
         })?;
-    } else if list.path.is_ident("repr") && matches!(ParseContext::TypeAttr{..} = pctx) {
+    } else if list.path.is_ident("repr") && matches!(ParseContext::TypeAttr { .. } = pctx) {
         with_nested_meta("repr", list.nested, |attr| {
             let path = attr.path();
             if path.is_ident("C") || path.is_ident("transparent") {

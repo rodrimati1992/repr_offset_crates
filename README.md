@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/rodrimati1992/repr_offset_crates.svg?branch=master)](https://travis-ci.org/rodrimati1992/repr_offset_crates)
+[![Rust](https://github.com/rodrimati1992/repr_offset_crates/workflows/Rust/badge.svg)](https://github.com/rodrimati1992/repr_offset_crates/actions)
 [![crates-io](https://img.shields.io/crates/v/repr_offset.svg)](https://crates.io/crates/repr_offset)
 [![api-docs](https://docs.rs/repr_offset/badge.svg)](https://docs.rs/repr_offset/*)
 

@@ -49,9 +49,9 @@ mod repr_c {
         alignment =  Aligned,
 
         impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 }
@@ -74,9 +74,9 @@ mod repr_transparent {
         alignment =  Aligned,
 
         impl[] MStruct {
-            pub const OFFSET_X: ();
-            pub const OFFSET_Y: String;
-            pub const OFFSET_Z: PhantomData<Vec<()>>;
+            pub const OFFSET_X, x: ();
+            pub const OFFSET_Y, y: String;
+            pub const OFFSET_Z, z: PhantomData<Vec<()>>;
         }
     }
 }
@@ -100,10 +100,10 @@ mod repr_c_tuple {
         alignment =  Aligned,
 
         impl[] MStruct {
-            pub const OFFSET_0: u8;
-            pub const OFFSET_1: i8;
-            pub const OFF_TWO: u64;
-            pub const OFF_3: &'static str;
+            pub const OFFSET_0, 0: u8;
+            pub const OFFSET_1, 1: i8;
+            pub const OFF_TWO, 2: u64;
+            pub const OFF_3, 3: &'static str;
         }
     }
 
@@ -134,9 +134,9 @@ mod aligned {
         alignment = Aligned,
 
         impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 }
@@ -159,9 +159,9 @@ mod packed {
         alignment = Unaligned,
 
         impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 }
@@ -184,9 +184,9 @@ mod packed_4 {
         alignment = Unaligned,
 
         impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 }
@@ -211,9 +211,9 @@ mod use_usize_offsets {
         usize_offsets = true,
 
         impl[] MStruct {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 }
@@ -240,10 +240,10 @@ mod changed_names {
         alignment = Aligned,
 
         impl[] MStruct {
-            pub const OFFSET_A: u8;
-            pub const OFFSET_B: u64;
-            pub const OFFSET_C: &'static str;
-            pub const OFFSET_D: bool;
+            pub const OFFSET_A, a: u8;
+            pub const OFFSET_B, b: u64;
+            pub const OFFSET_C, c: &'static str;
+            pub const OFFSET_D, d: bool;
         }
     }
 
@@ -281,9 +281,9 @@ mod generic_params {
         where[
             T: Copy + Debug,
         ] {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 
@@ -323,9 +323,9 @@ mod with_bounds {
         impl[T] MStruct<T>
         where[ T: Copy ]
         {
-            pub const OFFSET_X: u8;
-            pub const OFFSET_Y: u64;
-            pub const OFFSET_Z: &'static str;
+            pub const OFFSET_X, x: u8;
+            pub const OFFSET_Y, y: u64;
+            pub const OFFSET_Z, z: &'static str;
         }
     }
 

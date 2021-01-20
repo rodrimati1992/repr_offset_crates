@@ -87,6 +87,7 @@ fn derive_inner(
             }
         })
     });
+    let field_names = struct_.fields.iter().map(|x| &x.ident);
     let field_tys = struct_.fields.iter().map(|x| x.ty);
 
     let extra_bounds = options.extra_bounds.iter();
@@ -103,7 +104,7 @@ fn derive_inner(
             ]{
                 #(
                     #[doc = #offset_doc]
-                    #vis const #offset_name: #field_tys;
+                    #vis const #offset_name, #field_names: #field_tys;
                 )*
             }
         }

@@ -22,7 +22,7 @@ include = [
 travis-ci = { repository =  "rodrimati1992/repr_offset_crates/" }
 
 [features]
-default = ["derive"]
+default = []
 
 testing = [
     # "priv_expensive_test",
@@ -44,8 +44,8 @@ test_nightly = ["testing","priv_raw_ref"]
 [dependencies]
 repr_offset_derive = {version = "0.1.1", path = "../repr_offset_derive", optional = true}
 
+[dependencies.tstr]
+version = "0.2"
+
 [dev-dependencies]
 repr_offset_derive = {version = "0.1", path = "../repr_offset_derive"}
-
-[build-dependencies]
-rustc_version = "0.2.3"

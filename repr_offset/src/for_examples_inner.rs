@@ -41,13 +41,13 @@ macro_rules! declare_example_struct {
             alignment =  $alignment,
             impl[A,B,C,D] $name<A,B,C,D>{
                 /// The offset of the `a` field
-                pub const OFFSET_A: A;
+                pub const OFFSET_A, a: A;
                 /// The offset of the `b` field
-                pub const OFFSET_B: B;
+                pub const OFFSET_B, b: B;
                 /// The offset of the `c` field
-                pub const OFFSET_C: C;
+                pub const OFFSET_C, c: C;
                 /// The offset of the `d` field
-                pub const OFFSET_D: D;
+                pub const OFFSET_D, d: D;
             }
         }
     };

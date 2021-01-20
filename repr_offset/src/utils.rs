@@ -1,5 +1,7 @@
 //! Miscelaneous functions.
 
+use core::marker::PhantomData;
+
 /// A helper function to force a variable to move (copy if it's a Copy type).
 ///
 /// # Example
@@ -51,6 +53,15 @@ impl<T> Mem<T> {
     pub const ALIGN: usize = core::mem::align_of::<T>();
 }
 
+/// Helper type to construct certain PhantomData in const fns.
+pub struct MakePhantomData<T>(T);
+
+impl<T> MakePhantomData<T> {
+    /// Constructs a `PhantomData<fn()->T>`,
+    /// this is a workaround for constructing them inside `const fn`.
+    pub const FN_RET: PhantomData<fn() -> T> = PhantomData;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,11 +79,13 @@ mod tests {
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#[cfg(any(not(rust_1_36), test))]
-mod maybeuninit_emulation;
+#[doc(hidden)]
+pub trait AsPhantomData: Sized {
+    #[doc(hidden)]
+    const __REPR_OFFSET_PHANTOMDATA: PhantomData<Self> = PhantomData;
 
-#[cfg(rust_1_36)]
-pub(crate) type UnalignedMaybeUninit<T> = core::mem::MaybeUninit<T>;
+    #[doc(hidden)]
+    const __REPR_OFFSET_PHANTOMDATA_FN: PhantomData<fn() -> Self> = PhantomData;
+}
 
-#[cfg(not(rust_1_36))]
-pub(crate) type UnalignedMaybeUninit<T> = self::maybeuninit_emulation::UnalignedMaybeUninit<T>;
+impl<T> AsPhantomData for T {}

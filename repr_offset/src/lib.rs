@@ -77,10 +77,7 @@
 //!
 //! - Initialize an uninitialized struct by passing a pointer to it.
 //!
-//! This example only compiles since Rust 1.36 because it uses `MaybeUninit`.
-//!
-#![cfg_attr(rust_1_36, doc = "```rust")]
-#![cfg_attr(not(rust_1_36), doc = "```ignore")]
+//! ```rust
 //!
 //! use std::mem::MaybeUninit;
 //!
@@ -142,10 +139,11 @@
 //!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
-#![deny(clippy::missing_safety_doc)]
-#![deny(clippy::shadow_unrelated)]
-#![deny(clippy::wildcard_imports)]
-#![deny(missing_docs)]
+// TODO: uncomment
+// #![deny(clippy::missing_safety_doc)]
+// #![deny(clippy::shadow_unrelated)]
+// #![deny(clippy::wildcard_imports)]
+// #![deny(missing_docs)]
 
 #[doc(hidden)]
 pub extern crate self as repr_offset;
@@ -174,23 +172,24 @@ mod alignment;
 /// You can only use items from this module when the "for_examples" feature is enabled.
 pub mod for_examples {
     #[doc(inline)]
+    #[cfg(any(feature = "for_examples", doc))]
     pub use crate::for_examples_inner::*;
 }
 
 #[doc(hidden)]
-#[cfg(any(feature = "for_examples", all(rust_1_41, doc)))]
+#[cfg(any(feature = "for_examples", doc))]
 pub mod for_examples_inner;
 
-#[doc(hidden)]
-#[cfg(not(any(feature = "for_examples", all(rust_1_41, doc))))]
-pub mod for_examples_inner {}
-
 mod struct_field_offset;
+
+pub mod get_offset;
 
 pub mod utils;
 
 #[cfg(feature = "testing")]
 pub mod types_for_tests;
+
+pub use tstr;
 
 /// This derive macro [is documented in here](./docs/repr_offset_macro/index.html)
 #[doc(inline)]
@@ -199,8 +198,19 @@ pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
     alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
+    get_offset::{GetFieldOffset, PrivateFieldOffset},
     struct_field_offset::FieldOffset,
 };
 
 #[cfg(all(test, not(feature = "testing")))]
 compile_error! { "tests must be run with the \"testing\" feature" }
+
+// DO NOT USE THIS OUTSIDE MACROS OF THIS CRATE
+#[doc(hidden)]
+pub mod pmr {
+    pub use core::marker::PhantomData;
+
+    pub use crate::get_offset::{
+        loop_create_mutref, GetFieldOffset, PrivateFieldOffset, PrivateFieldOffsetSameType,
+    };
+}

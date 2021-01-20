@@ -3,14 +3,14 @@
 #![allow(clippy::ptr_offset_with_cast)]
 
 use crate::{
-    offset_calc::GetNextFieldOffset,
-    utils::{Mem, UnalignedMaybeUninit},
-    Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned,
+    offset_calc::GetNextFieldOffset, utils::Mem, Aligned, Alignment, CombinePacking,
+    CombinePackingOut, Unaligned,
 };
 
 use core::{
     fmt::{self, Debug},
     marker::PhantomData,
+    mem::MaybeUninit,
     ops::Add,
 };
 
@@ -1666,7 +1666,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
 macro_rules! unaligned_swap {
     ($self:ident, $left:ident, $right:ident, $left_to_right:expr, $F:ty) => {{
         // This function can definitely be optimized.
-        let mut tmp = UnalignedMaybeUninit::<$F>::uninit();
+        let mut tmp = MaybeUninit::<$F>::uninit();
         let tmp = tmp.as_mut_ptr() as *mut u8;
 
         let $left = get_mut_ptr_method!($self, $left, $F) as *mut u8;

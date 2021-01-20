@@ -2,6 +2,10 @@ use crate::FieldOffset;
 
 use core::marker::PhantomData;
 
+mod tuple_impls;
+
+//////////////////////////////////////////////////////////////////////////////////
+
 pub unsafe trait GetFieldOffset<K>: Sized {
     type This;
     type Field;
@@ -9,6 +13,8 @@ pub unsafe trait GetFieldOffset<K>: Sized {
 
     const PRIV_OFFSET: PrivateFieldOffset<Self, K, Self::This, Self::Field, Self::Alignment>;
 }
+
+//////////////////////////////////////////////////////////////////////////////////
 
 pub struct PrivateFieldOffset<AC, K, S, F, A> {
     offset: FieldOffset<S, F, A>,
@@ -47,10 +53,26 @@ impl<K, S, F, A> PrivateFieldOffset<S, K, S, F, A> {
     pub const fn infer(self, _struct: &S) {}
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+#[doc(hidden)]
+pub type PrivateFieldOffsetSameType<K, S, F, A> = PrivateFieldOffset<S, K, S, F, A>;
+
+////////////////////////////////////////////////////////////////////////////////
+
 #[doc(hidden)]
 pub fn loop_create_mutref<'a, S>(_: PhantomData<fn() -> S>) -> &'a mut S {
     loop {}
 }
 
 #[doc(hidden)]
-pub type PrivateFieldOffsetSameType<K, S, F, A> = PrivateFieldOffset<S, K, S, F, A>;
+pub fn loop_create_fo<S, F, A>(_: PhantomData<fn() -> S>) -> FieldOffset<S, F, A> {
+    loop {}
+}
+
+#[doc(hidden)]
+pub fn loop_create_val<S>(_: PhantomData<fn() -> S>) -> S {
+    loop {}
+}
+
+////////////////////////////////////////////////////////////////////////////////

@@ -65,8 +65,8 @@
 ///     impl[T: Copy, U] Bar<T, U>
 ///     where[ U: Clone ]
 ///     {
-///         pub const OFFSET_0: T;
-///         pub const OFFSET_1: U;
+///         pub const OFFSET_0, 0: T;
+///         pub const OFFSET_1, 1: U;
 ///     }
 /// }
 ///
@@ -112,9 +112,9 @@
 ///     alignment =  Unaligned,
 ///
 ///     impl[] Bar {
-///         pub const OFFSET_MUGS: u32;
-///         pub const OFFSET_BOTTLES: u16;
-///         pub const OFFSET_TABLE: String;
+///         pub const OFFSET_MUGS, mugs: u32;
+///         pub const OFFSET_BOTTLES, bottles: u16;
+///         pub const OFFSET_TABLE, table: String;
 ///     }
 /// }
 ///
@@ -148,6 +148,10 @@ macro_rules! unsafe_struct_field_offsets{
                     Self( $($Self,)? Self, )
                     alignment =  $alignment,
                     usize_offsets($($usize_offsets,)? false,)
+
+                    $(#[$impl_attr])*
+                    impl[ $($impl_params)* ] $self
+                    where [ $($($where)*)? ]
                 )
                 previous(
                     (
@@ -161,18 +165,8 @@ macro_rules! unsafe_struct_field_offsets{
                 )
                 offsets($(
                     $(#[$const_attr])*
-                    $vis $offset: $field_ty;
+                    $vis $offset, $field_ident: $field_ty;
                 )*)
-            }
-        }
-
-        $crate::_priv_impl_get_field_offsets! {
-            alignment =  $alignment,
-            ($(#[$impl_attr])*)
-            impl [ $($impl_params)* ] ( $self, $($Self,)? $self, )
-            where [$($($where)*)?]
-            {
-                $(($offset, $vis, $field_ident: $field_ty))*
             }
         }
     };
@@ -211,17 +205,30 @@ macro_rules! _priv_usfoi{
     (@val false, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
         $prev.next_field_offset()
     };
+    (@PrivateFieldOffset false, $expr:expr)=>{
+        $crate::pmr::PrivateFieldOffset::new($expr)
+    };
+    (@PrivateFieldOffset true, $expr:expr)=>{unsafe{
+        $crate::pmr::PrivateFieldOffset::new(
+            $crate::FieldOffset::new($expr)
+        )
+    }};
+
     (
         params $params:tt
         params(
             Self( $Self:ty, $($_ignored_Self:ty,)? )
             alignment =  $alignment:ty,
             usize_offsets($usize_offsets:ident, $($_ignored_io:ident,)? )
+
+            $(#[$impl_attr:meta])*
+            impl[ $($impl_params:tt)* ] $self:ty
+            where [ $($where:tt)* ]
         )
         previous( ($prev_offset:expr, $prev_ty:ty), $($prev:tt)* )
         offsets(
             $(#[$const_attr:meta])*
-            $vis:vis $offset:ident : $field_ty:ty;
+            $vis:vis $offset:ident, $field_ident:tt : $field_ty:ty;
             $($next:tt)*
         )
     )=>{
@@ -231,6 +238,29 @@ macro_rules! _priv_usfoi{
                 @ty $usize_offsets, $Self, $field_ty, $alignment
             )
         = unsafe{
+            type __Key = $crate::tstr::TS!($field_ident);
+
+            $(#[$impl_attr])*
+            unsafe impl<$($impl_params)*> $crate::pmr::GetFieldOffset<__Key> for $self
+            where $($where)*
+            {
+                type This = $Self;
+                type Field = $field_ty;
+                type Alignment = $alignment;
+
+                const PRIV_OFFSET: $crate::pmr::PrivateFieldOffset<
+                    Self,
+                    __Key,
+                    Self::This,
+                    Self::Field,
+                    $alignment,
+                > = $crate::_priv_usfoi!(
+                    @PrivateFieldOffset
+                    $usize_offsets,
+                    Self::$offset
+                );
+            }
+
             $crate::_priv_usfoi!(
                 @val
                 $usize_offsets, $Self, $prev_offset, $prev_ty, $field_ty
@@ -250,55 +280,4 @@ macro_rules! _priv_usfoi{
         previous($($prev:tt)*)
         offsets()
     )=>{};
-}
-
-#[doc(hidden)]
-#[macro_export]
-macro_rules! _priv_impl_get_field_offsets{
-    (
-        alignment =  $alignment:ty,
-        $attrs:tt
-        // $self is the type that has the associated constants.
-        // $Self is the type that contains the field.
-        impl $impl_:tt ($self:ty, $Self:ty, $($_ignored_self:ty,)?)
-        where $where:tt
-        {
-            $(($offset:ident, $vis:vis, $field_ident:tt: $field_ty:ty))*
-        }
-    )=>{
-        $(
-            const _: () = {
-                $crate::_priv_impl_get_field_offsets!{
-                    @GetFieldOffset
-                    alignment = $alignment,
-                    $attrs
-                    impl $impl_ ($self, $Self)
-                    where $where
-                    ($offset, $vis, $field_ident: $field_ty)
-                }
-            };
-        )*
-    };
-    (@GetFieldOffset
-        alignment =  $alignment:ty,
-        ($(#[$impl_attr:meta])*)
-        impl[ $($impl_params:tt)* ] ($self:ty, $Self:ty)
-        where [ $($where:tt)* ]
-        ($offset:ident, $vis:vis, $field_ident:tt: $field_ty:ty)
-    )=>{
-        type __Key = $crate::tstr::TS!($field_ident);
-
-        $(#[$impl_attr])*
-        unsafe impl<$($impl_params)*> $crate::pmr::GetFieldOffset<__Key> for $self
-        where $($where)*
-        {
-            type This = $Self;
-            type Field = $field_ty;
-            type Alignment = $alignment;
-
-            const PRIV_OFFSET:
-                $crate::pmr::PrivateFieldOffset<Self, __Key, Self::This, Self::Field, $alignment> =
-                $crate::pmr::PrivateFieldOffset::new(Self::$offset);
-        }
-    }
 }

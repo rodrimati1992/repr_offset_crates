@@ -122,9 +122,9 @@
 //!     alignment =  Aligned,
 //!
 //!     impl[] Foo {
-//!         pub const OFFSET_NAME:String;
-//!         pub const OFFSET_X:u32;
-//!         pub const OFFSET_Y:u32;
+//!         pub const OFFSET_NAME, name: String;
+//!         pub const OFFSET_X, x: u32;
+//!         pub const OFFSET_Y, y: u32;
 //!     }
 //! }
 //!
@@ -182,7 +182,9 @@ pub mod for_examples_inner;
 
 mod struct_field_offset;
 
-pub mod get_offset;
+// mod repr_offset_ext;
+
+pub mod get_field_offset;
 
 pub mod utils;
 
@@ -198,7 +200,8 @@ pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
     alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
-    get_offset::{GetFieldOffset, PrivateFieldOffset},
+    get_field_offset::GetFieldOffset,
+    // repr_offset_ext::{ReprOffsetExt, ReprOffsetRawExt, ReprOffsetRawMutExt},
     struct_field_offset::FieldOffset,
 };
 
@@ -210,7 +213,8 @@ compile_error! { "tests must be run with the \"testing\" feature" }
 pub mod pmr {
     pub use core::marker::PhantomData;
 
-    pub use crate::get_offset::{
-        loop_create_mutref, GetFieldOffset, PrivateFieldOffset, PrivateFieldOffsetSameType,
+    pub use crate::get_field_offset::{
+        loop_create_fo, loop_create_mutref, loop_create_val, GetFieldOffset, PrivateFieldOffset,
+        PrivateFieldOffsetSameType,
     };
 }

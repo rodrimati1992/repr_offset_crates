@@ -18,6 +18,9 @@
 /// The optional `Self` parameter overrides which struct the [`FieldOffset`] constants
 /// (that this outputs) are an offset inside of.
 ///
+/// Note that passing the this parameter unconditionally causes the type
+/// not to implement [`GetFieldOffset`].
+///
 /// ### `alignment`
 ///
 /// The `alignment` parameter can be either [`Aligned`] or [`Unaligned`],
@@ -44,6 +47,9 @@
 /// - (not passing this parameter): Implements [`GetFieldOffset`].
 /// - `false`: Does not implement [`GetFieldOffset`].
 /// - `true`: Implements [`GetFieldOffset`].
+///
+/// Note that passing the `Self` parameter unconditionally causes the type
+/// not to implement [`GetFieldOffset`].
 ///
 /// [`Aligned`]: ./struct.Aligned.html
 /// [`Unaligned`]: ./struct.Unaligned.html
@@ -151,7 +157,8 @@ macro_rules! unsafe_struct_field_offsets{
         {
             $(
                 $(#[$const_attr:meta])*
-                $vis:vis const $offset:ident, $field_ident:tt: $field_ty:ty;
+                $( pub $(($($inn:tt)*))? )?
+                const $offset:ident, $field_ident:tt: $field_ty:ty;
             )*
         }
     )=>{
@@ -165,7 +172,7 @@ macro_rules! unsafe_struct_field_offsets{
                     Self( $($Self,)? Self, )
                     alignment =  $alignment,
                     usize_offsets($($usize_offsets,)? false,)
-                    impl_GetFieldOffset($($impl_gfo,)? true,)
+                    impl_GetFieldOffset( $(false, $Self:ty )? $($impl_gfo,)? true,)
 
                     $(#[$impl_attr])*
                     impl[ $($impl_params)* ] $self
@@ -183,7 +190,7 @@ macro_rules! unsafe_struct_field_offsets{
                 )
                 offsets($(
                     $(#[$const_attr])*
-                    $vis $offset, $field_ident: $field_ty;
+                    ($( pub $(($($inn:tt)*))? )?) $offset, $field_ident: $field_ty;
                 )*)
             }
         }
@@ -223,8 +230,6 @@ macro_rules! _priv_usfoi{
     (@val false, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
         $prev.next_field_offset()
     };
-    (@privacy pub) => { $crate::privacy::IsPublic };
-    (@privacy $vis:vis) => { $crate::privacy::IsPrivate };
     (@InitPrivOffset false, $expr:expr)=>{
         $crate::pmr::InitPrivOffset::new($expr)
     };
@@ -240,7 +245,7 @@ macro_rules! _priv_usfoi{
             Self( $Self:ty, $($_ignored_Self:ty,)? )
             alignment =  $alignment:ty,
             usize_offsets($usize_offsets:ident, $($_ignored_io:ident,)? )
-            impl_GetFieldOffset($impl_gfo:ident, $( $_ignored_impl_gfo:ident ,)?)
+            impl_GetFieldOffset($impl_gfo:ident, $($_ignored_impl_gfo:tt)*)
 
             $(#[$impl_attr:meta])*
             impl[ $($impl_params:tt)* ] $self:ty
@@ -249,12 +254,12 @@ macro_rules! _priv_usfoi{
         previous( ($prev_offset:expr, $prev_ty:ty), $($prev:tt)* )
         offsets(
             $(#[$const_attr:meta])*
-            $vis:vis $offset:ident, $field_ident:tt : $field_ty:ty;
+            ($($vis:tt)*) $offset:ident, $field_ident:tt : $field_ty:ty;
             $($next:tt)*
         )
     )=>{
         $(#[$const_attr])*
-        $vis const $offset:
+        $($vis)* const $offset:
             $crate::_priv_usfoi!(
                 @ty $usize_offsets, $Self, $field_ty, $alignment
             )
@@ -269,7 +274,7 @@ macro_rules! _priv_usfoi{
                 impl[ $($impl_params)* ] $self
                 where [ $($where)* ]
 
-                ($vis $offset, $field_ident : $field_ty)
+                (($($vis)*), $offset, $field_ident : $field_ty)
             }
 
             $crate::_priv_usfoi!(
@@ -307,26 +312,24 @@ macro_rules! _priv_impl_getfieldoffset{
         impl[ $($impl_params:tt)* ] $self:ty
         where [ $($where:tt)* ]
 
-        ($vis:vis $offset:ident, $field_ident:tt : $field_ty:ty)
+        (($($vis:tt)*), $offset:ident, $field_ident:tt : $field_ty:ty)
 
     )=>{
         type __Key = $crate::tstr::TS!($field_ident);
-        type __Privacy = $crate::_priv_usfoi!(@privacy $vis );
+        type __Privacy = $crate::_priv_get_privacy!($($vis)*);
 
         $(#[$impl_attr])*
         unsafe impl<$($impl_params)*> $crate::pmr::GetFieldOffset<__Key> for $self
         where $($where)*
         {
-            type This = $Self;
             type Field = $field_ty;
             type Alignment = $alignment;
             type Privacy = __Privacy;
 
             const INIT_OFFSET_WITH_VIS: $crate::pmr::InitPrivOffset<
                 Self,
-                __Key,
                 __Privacy,
-                Self::This,
+                __Key,
                 Self::Field,
                 $alignment,
             > = $crate::_priv_usfoi!(
@@ -337,4 +340,15 @@ macro_rules! _priv_impl_getfieldoffset{
         }
     };
     (impl_GetFieldOffset = false $($rem:tt)*)=>[];
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! _priv_get_privacy {
+    (pub) => {
+        $crate::privacy::IsPublic
+    };
+    ($($vis:tt)*) => {
+        $crate::privacy::IsPrivate
+    };
 }

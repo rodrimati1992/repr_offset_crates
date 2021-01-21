@@ -361,6 +361,16 @@ impl<S, F, A> FieldOffset<S, F, A> {
     }
 }
 
+impl FieldOffset<(), (), Aligned> {
+    /// Constructs a `FieldOffset` where `T` is the struct and the field type.
+    pub const fn identity<T>() -> FieldOffset<T, T, Aligned> {
+        FieldOffset {
+            offset: 0,
+            _marker: PhantomData,
+        }
+    }
+}
+
 impl<S, F> FieldOffset<S, F, Aligned> {
     /// Combines this `FieldOffset` with another one, to access a nested field.
     ///

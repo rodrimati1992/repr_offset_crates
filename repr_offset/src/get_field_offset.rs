@@ -33,8 +33,6 @@ mod tuple_impls;
 /// [`GetPubFieldOffset`]: ../struct.GetPubFieldOffset.html
 ///
 pub unsafe trait GetFieldOffset<FN>: Sized {
-    /// The type that contains the field.
-    type This;
     /// The type of the field.
     type Field;
     /// Whether the field is [`Aligned`] or [`Unaligned`].
@@ -53,9 +51,8 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
     /// this is the offset of the field.
     const INIT_OFFSET_WITH_VIS: InitPrivOffset<
         Self,
-        FN,
         Self::Privacy,
-        Self::This,
+        FN,
         Self::Field,
         Self::Alignment,
     >;
@@ -64,9 +61,8 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
     /// wrapped in a `FieldOffsetWithVis` because the field may te private.
     const OFFSET_WITH_VIS: FieldOffsetWithVis<
         Self,
-        FN,
         Self::Privacy,
-        Self::This,
+        FN,
         Self::Field,
         Self::Alignment,
     > = <Self as GetFieldOffset<FN>>::INIT_OFFSET_WITH_VIS.to_private_field_offset();
@@ -77,9 +73,26 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
 /// An alias of the [`GetFieldOffset`] trait for public fields.
 ///
 /// [`GetFieldOffset`]: ./trait.GetFieldOffset.html
-pub trait GetPubFieldOffset<FN>: GetFieldOffset<FN, Privacy = IsPublic> {}
+pub trait GetPubFieldOffset<FN>: GetFieldOffset<FN, Privacy = IsPublic> {
+    /// An alias for `GetFieldOffset::Field`
+    type PubField;
 
-impl<FN, Ty> GetPubFieldOffset<FN> for Ty where Ty: GetFieldOffset<FN, Privacy = IsPublic> {}
+    /// The offset of the field.
+    const OFFSET: FieldOffset<Self, Self::Field, Self::Alignment> =
+        <Self as GetFieldOffset<FN>>::OFFSET_WITH_VIS.to_field_offset();
+}
+
+impl<FN, Ty> GetPubFieldOffset<FN> for Ty
+where
+    Ty: GetFieldOffset<FN, Privacy = IsPublic>,
+{
+    type PubField = <Ty as GetFieldOffset<FN>>::Field;
+}
+
+//////////////////////////////////////////////////////////////////////////////////
+
+/// Gets the type of the field in the `GetPubFieldOffset<FN>` impl for `This`.
+pub type GetFieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubField;
 
 //////////////////////////////////////////////////////////////////////////////////
 
@@ -91,12 +104,12 @@ impl<FN, Ty> GetPubFieldOffset<FN> for Ty where Ty: GetFieldOffset<FN, Privacy =
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 ///
-pub struct InitPrivOffset<AC, FN, V, S, F, A> {
+pub struct InitPrivOffset<S, V, FN, F, A> {
     offset: FieldOffset<S, F, A>,
-    _associated_consts_from: PhantomData<fn() -> (AC, FN, V)>,
+    _associated_consts_from: PhantomData<fn() -> (FN, V)>,
 }
 
-impl<AC, FN, V, S, F, A> InitPrivOffset<AC, FN, V, S, F, A> {
+impl<S, V, FN, F, A> InitPrivOffset<S, V, FN, F, A> {
     /// Constructs this `InitPrivOffset`
     pub const fn new(offset: FieldOffset<S, F, A>) -> Self {
         Self {
@@ -105,7 +118,7 @@ impl<AC, FN, V, S, F, A> InitPrivOffset<AC, FN, V, S, F, A> {
         }
     }
 
-    const fn to_private_field_offset(self) -> FieldOffsetWithVis<AC, FN, V, S, F, A> {
+    const fn to_private_field_offset(self) -> FieldOffsetWithVis<S, V, FN, F, A> {
         FieldOffsetWithVis {
             offset: self.offset,
             _associated_consts_from: crate::utils::MakePhantomData::FN_RET,
@@ -121,32 +134,32 @@ impl<AC, FN, V, S, F, A> InitPrivOffset<AC, FN, V, S, F, A> {
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 ///
-pub struct FieldOffsetWithVis<AC, FN, V, S, F, A> {
+pub struct FieldOffsetWithVis<S, V, FN, F, A> {
     offset: FieldOffset<S, F, A>,
-    _associated_consts_from: PhantomData<fn() -> (AC, FN, V)>,
+    _associated_consts_from: PhantomData<fn() -> (FN, V)>,
     // The type that we got this FieldOffsetWithVis from,
     // not necessarily same as the one that contains the field,
     // that is `S`.
     #[doc(hidden)]
-    pub ac: PhantomData<fn() -> AC>,
+    pub ac: PhantomData<fn() -> S>,
 }
 
-impl<AC, FN, V, S, F, A> Copy for FieldOffsetWithVis<AC, FN, V, S, F, A> {}
+impl<S, V, FN, F, A> Copy for FieldOffsetWithVis<S, V, FN, F, A> {}
 
-impl<AC, FN, V, S, F, A> Clone for FieldOffsetWithVis<AC, FN, V, S, F, A> {
+impl<S, V, FN, F, A> Clone for FieldOffsetWithVis<S, V, FN, F, A> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<AC, FN, S, F, A> FieldOffsetWithVis<AC, FN, IsPublic, S, F, A> {
+impl<FN, S, F, A> FieldOffsetWithVis<S, IsPublic, FN, F, A> {
     /// Unwraps this into a [`FieldOffset`] for a public field.
     pub const fn to_field_offset(self) -> FieldOffset<S, F, A> {
         self.offset
     }
 }
 
-impl<AC, FN, V, S, F, A> FieldOffsetWithVis<AC, FN, V, S, F, A> {
+impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
     /// Unwraps this into a [`FieldOffset`] for a possibly private field.
     ///
     /// # Safety
@@ -159,17 +172,10 @@ impl<AC, FN, V, S, F, A> FieldOffsetWithVis<AC, FN, V, S, F, A> {
     pub const unsafe fn private_field_offset(self) -> FieldOffset<S, F, A> {
         self.offset
     }
-}
 
-impl<FN, V, S, F, A> FieldOffsetWithVis<S, FN, V, S, F, A> {
     #[doc(hidden)]
     pub const fn infer(self, _struct: &S) {}
 }
-
-////////////////////////////////////////////////////////////////////////////////
-
-#[doc(hidden)]
-pub type FieldOffsetWithVisSameType<FN, V, S, F, A> = FieldOffsetWithVis<S, FN, V, S, F, A>;
 
 ////////////////////////////////////////////////////////////////////////////////
 

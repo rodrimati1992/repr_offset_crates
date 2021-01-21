@@ -25,16 +25,14 @@ macro_rules! tuple_impl {
             CombAlign: Alignment,
             CombPriv: Privacy,
         {
-            type This = $first::This;
             type Field = $last;
             type Alignment = CombAlign;
             type Privacy = CombPriv;
 
             const INIT_OFFSET_WITH_VIS: InitPrivOffset<
                 Self,
-                ($($field,)*),
                 Self::Privacy,
-                Self::This,
+                ($($field,)*),
                 $last,
                 Self::Alignment,
             > = unsafe{

@@ -162,7 +162,9 @@ pub mod docs;
 
 pub mod offset_calc;
 
-mod alignment;
+pub mod alignment;
+
+pub mod privacy;
 
 /// Types used for examples,
 ///
@@ -199,8 +201,8 @@ pub use tstr;
 pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
-    alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
-    get_field_offset::GetFieldOffset,
+    alignment::{Aligned, Unaligned},
+    get_field_offset::GetPubFieldOffset,
     // repr_offset_ext::{ReprOffsetExt, ReprOffsetRawExt, ReprOffsetRawMutExt},
     struct_field_offset::FieldOffset,
 };
@@ -214,7 +216,7 @@ pub mod pmr {
     pub use core::marker::PhantomData;
 
     pub use crate::get_field_offset::{
-        loop_create_fo, loop_create_mutref, loop_create_val, GetFieldOffset, PrivateFieldOffset,
-        PrivateFieldOffsetSameType,
+        loop_create_fo, loop_create_mutref, loop_create_val, FieldOffsetWithVis,
+        FieldOffsetWithVisSameType, GetFieldOffset, InitPrivOffset,
     };
 }

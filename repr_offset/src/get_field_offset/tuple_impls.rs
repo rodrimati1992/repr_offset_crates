@@ -1,6 +1,8 @@
 use crate::{
-    get_field_offset::PrivateFieldOffset, Aligned, Alignment, CombinePacking, FieldOffset,
-    GetFieldOffset,
+    alignment::{Aligned, Alignment, CombinePacking},
+    get_field_offset::{GetFieldOffset, InitPrivOffset},
+    privacy::{CombinePrivacy, IsPublic, Privacy},
+    FieldOffset,
 };
 
 macro_rules! tuple_impl {
@@ -11,31 +13,41 @@ macro_rules! tuple_impl {
         $first:ident,
         $last:ident
     ) => {
-        unsafe impl<$($tp,)* $($field,)* $last, CombAlign> GetFieldOffset<($($field,)*)> for $first
+        unsafe impl<$($tp,)* $($field,)* $last, CombAlign, CombPriv>
+            GetFieldOffset<($($field,)*)>
+        for $first
         where
             $(
                 $tp: GetFieldOffset<$field, Field = $tp_trail>,
             )*
             ($($tp::Alignment,)*): CombinePacking<Aligned, Output = CombAlign>,
+            ($($tp::Privacy,)*): CombinePrivacy<IsPublic, Output = CombPriv>,
             CombAlign: Alignment,
+            CombPriv: Privacy,
         {
             type This = $first::This;
             type Field = $last;
             type Alignment = CombAlign;
+            type Privacy = CombPriv;
 
-            const PRIV_OFFSET: PrivateFieldOffset<
+            const INIT_OFFSET_WITH_VIS: InitPrivOffset<
                 Self,
                 ($($field,)*),
+                Self::Privacy,
                 Self::This,
                 $last,
                 Self::Alignment,
             > = unsafe{
                 let offset = {
                     0
-                    $( + <$tp as GetFieldOffset<$field>>::PRIV_OFFSET.private_field_offset().offset() )*
+                    $(
+                        + <$tp as GetFieldOffset<$field>>::OFFSET_WITH_VIS
+                            .private_field_offset()
+                            .offset()
+                    )*
                 };
 
-                PrivateFieldOffset::new(FieldOffset::new(offset))
+                InitPrivOffset::new(FieldOffset::new(offset))
             };
         }
     };

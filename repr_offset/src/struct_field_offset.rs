@@ -3,8 +3,9 @@
 #![allow(clippy::ptr_offset_with_cast)]
 
 use crate::{
-    offset_calc::GetNextFieldOffset, utils::Mem, Aligned, Alignment, CombinePacking,
-    CombinePackingOut, Unaligned,
+    alignment::{Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned},
+    offset_calc::GetNextFieldOffset,
+    utils::Mem,
 };
 
 use core::{

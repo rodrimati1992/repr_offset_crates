@@ -6,9 +6,20 @@ mod tuple_impls;
 
 //////////////////////////////////////////////////////////////////////////////////
 
+/// Marker trait for types that implement `GetFieldOffset`.
+pub unsafe trait ImplsGetFieldOffset: Sized {}
+
+//////////////////////////////////////////////////////////////////////////////////
+
+/// Helper type to implement `GetFieldOffset<(N0, N1, ...)>` for all types without
+/// blowing up the time that `cargo doc` takes to run.
+pub struct ImplGetNestedFieldOffset<T>(T);
+
+//////////////////////////////////////////////////////////////////////////////////
+
 /// For getting the offset of a field given its name.
 ///
-/// This trait exists to make it possible for the [`Off`] and [`off`] macros to get the
+/// This trait exists to make it possible for the [`OFF`] and [`off`] macros to get the
 /// [`FieldOffset`] of a field.
 ///
 /// # SemVer
@@ -27,7 +38,7 @@ mod tuple_impls;
 ///
 /// - A tuple of [`tstr::TStr`]s: representing a nested field, eg: (`tstr::TS!(foo,bar,baz)`).
 ///
-/// [`Off`] ../macro.Off.html
+/// [`OFF`] ../macro.OFF.html
 /// [`off`]: ../macro.off.html
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 /// [`GetPubFieldOffset`]: ../struct.GetPubFieldOffset.html
@@ -104,6 +115,7 @@ pub type GetFieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubField;
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 ///
+#[repr(transparent)]
 pub struct InitPrivOffset<S, V, FN, F, A> {
     offset: FieldOffset<S, F, A>,
     _associated_consts_from: PhantomData<fn() -> (FN, V)>,
@@ -134,6 +146,7 @@ impl<S, V, FN, F, A> InitPrivOffset<S, V, FN, F, A> {
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 ///
+#[repr(transparent)]
 pub struct FieldOffsetWithVis<S, V, FN, F, A> {
     offset: FieldOffset<S, F, A>,
     _associated_consts_from: PhantomData<fn() -> (FN, V)>,
@@ -169,11 +182,13 @@ impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
     ///
     /// [`FieldOffset`]: ../struct.FieldOffset.html
     ///
+    #[inline(always)]
     pub const unsafe fn private_field_offset(self) -> FieldOffset<S, F, A> {
         self.offset
     }
 
     #[doc(hidden)]
+    #[inline(always)]
     pub const fn infer(self, _struct: &S) {}
 }
 

@@ -5,7 +5,7 @@
 #[macro_use]
 mod impl_fieldoffset_methods;
 
-// mod repr_offset_ext_impls;
+mod repr_offset_ext_impls;
 
 ////////////////////////////////////////////////////////////////////////////////
 

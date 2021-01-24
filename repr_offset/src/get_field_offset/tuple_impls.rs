@@ -1,6 +1,8 @@
 use crate::{
-    alignment::{Aligned, Alignment, CombinePacking},
-    get_field_offset::{GetFieldOffset, InitPrivOffset},
+    alignment::{Aligned, Alignment, CombineAlignment},
+    get_field_offset::{
+        GetFieldOffset, ImplGetNestedFieldOffset, ImplsGetFieldOffset, InitPrivOffset,
+    },
     privacy::{CombinePrivacy, IsPublic, Privacy},
     FieldOffset,
 };
@@ -13,14 +15,38 @@ macro_rules! tuple_impl {
         $first:ident,
         $last:ident
     ) => {
+        unsafe impl<T, $($field,)*>
+            GetFieldOffset<($($field,)*)>
+        for T
+        where
+            T: ImplsGetFieldOffset,
+            ImplGetNestedFieldOffset<T>: GetFieldOffset<($($field,)*)>
+        {
+            type Field = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Field;
+            type Alignment = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Alignment;
+            type Privacy = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Privacy;
+
+            const INIT_OFFSET_WITH_VIS: InitPrivOffset<
+                Self,
+                Self::Privacy,
+                ($($field,)*),
+                Self::Field,
+                Self::Alignment,
+            > = unsafe{
+                <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::INIT_OFFSET_WITH_VIS
+                    .cast()
+            };
+        }
+
         unsafe impl<$($tp,)* $($field,)* $last, CombAlign, CombPriv>
             GetFieldOffset<($($field,)*)>
-        for $first
+        for ImplGetNestedFieldOffset<$first>
         where
+            $first: ImplsGetFieldOffset,
             $(
                 $tp: GetFieldOffset<$field, Field = $tp_trail>,
             )*
-            ($($tp::Alignment,)*): CombinePacking<Aligned, Output = CombAlign>,
+            ($($tp::Alignment,)*): CombineAlignment<Aligned, Output = CombAlign>,
             ($($tp::Privacy,)*): CombinePrivacy<IsPublic, Output = CombPriv>,
             CombAlign: Alignment,
             CombPriv: Privacy,

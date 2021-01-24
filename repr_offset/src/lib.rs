@@ -184,7 +184,7 @@ pub mod for_examples_inner;
 
 mod struct_field_offset;
 
-// mod repr_offset_ext;
+pub mod ext;
 
 pub mod get_field_offset;
 
@@ -202,8 +202,8 @@ pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
     alignment::{Aligned, Unaligned},
-    get_field_offset::GetPubFieldOffset,
-    // repr_offset_ext::{ReprOffsetExt, ReprOffsetRawExt, ReprOffsetRawMutExt},
+    // ext::{ROExtAcc, ROExtOps, ROExtRawAcc, ROExtRawMutAcc, ROExtRawMutOps, ROExtRawOps},
+    get_field_offset::{GetFieldType, GetPubFieldOffset},
     struct_field_offset::FieldOffset,
 };
 
@@ -215,8 +215,10 @@ compile_error! { "tests must be run with the \"testing\" feature" }
 pub mod pmr {
     pub use core::marker::PhantomData;
 
+    pub use crate::struct_field_offset::FOAssertStruct;
+
     pub use crate::get_field_offset::{
-        loop_create_fo, loop_create_mutref, loop_create_val, FieldOffsetWithVis,
-        FieldOffsetWithVisSameType, GetFieldOffset, InitPrivOffset,
+        loop_create_fo, loop_create_mutref, loop_create_val, FieldOffsetWithVis, GetFieldOffset,
+        GetPubFieldOffset, ImplsGetFieldOffset, InitPrivOffset,
     };
 }

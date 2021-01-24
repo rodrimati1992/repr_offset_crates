@@ -33,13 +33,13 @@ impl Alignment for Unaligned {}
 ///
 /// [`Alignment`]: ./trait.Alignment.html
 /// [`FieldOffset + FieldOffset`]: ./struct.FieldOffset.html#impl-Add<FieldOffset<F%2C F2%2C A2>>
-pub type CombinePackingOut<Lhs, Rhs> = <Lhs as CombinePacking<Rhs>>::Output;
+pub type CombineAlignmentOut<Lhs, Rhs> = <Lhs as CombineAlignment<Rhs>>::Output;
 
 /// Trait that combines two [`Alignment`] types,
 /// determines the return type of `FieldOffset + FieldOffset`.
 ///
 /// [`Alignment`]: ./trait.Alignment.html
-pub trait CombinePacking<Rhs: Alignment> {
+pub trait CombineAlignment<Rhs: Alignment> {
     /// This is [`Aligned`] if both `Self` and the `Rhs` parameter are [`Aligned`],
     /// otherwise it is [`Unaligned`].
     ///
@@ -49,16 +49,16 @@ pub trait CombinePacking<Rhs: Alignment> {
     type Output: Alignment;
 }
 
-impl<A: Alignment> CombinePacking<A> for Aligned {
+impl<A: Alignment> CombineAlignment<A> for Aligned {
     type Output = A;
 }
-impl<A: Alignment> CombinePacking<A> for Unaligned {
+impl<A: Alignment> CombineAlignment<A> for Unaligned {
     type Output = Unaligned;
 }
 
 macro_rules! tuple_impls {
     (small=> $ty:ty = $output:ty ) => {
-        impl<Carry: Alignment> CombinePacking<Carry> for $ty {
+        impl<Carry: Alignment> CombineAlignment<Carry> for $ty {
             type Output = $output;
         }
     };
@@ -68,15 +68,15 @@ macro_rules! tuple_impls {
     )=>{
         #[allow(non_camel_case_types)]
         impl<A: Alignment, $($t0,$t1,$t2,$t3,)* $($trailing,)* CombTuples >
-            CombinePacking<A>
+            CombineAlignment<A>
         for ($($t0,$t1,$t2,$t3,)* $($trailing,)*)
         where
-            ($($trailing,)*): CombinePacking<A>,
-            $( ($t0,$t1,$t2,$t3): CombinePacking<Aligned>, )*
+            ($($trailing,)*): CombineAlignment<A>,
+            $( ($t0,$t1,$t2,$t3): CombineAlignment<Aligned>, )*
             (
-                $( CombinePackingOut<($t0,$t1,$t2,$t3), Aligned>, )*
-            ):CombinePacking<
-                CombinePackingOut<($($trailing,)*), A>,
+                $( CombineAlignmentOut<($t0,$t1,$t2,$t3), Aligned>, )*
+            ):CombineAlignment<
+                CombineAlignmentOut<($($trailing,)*), A>,
                 Output = CombTuples,
             >,
             CombTuples: Alignment,

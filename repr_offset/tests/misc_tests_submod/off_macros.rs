@@ -39,11 +39,11 @@ const _CONST_EXECUTABLE: () = {
     let _: FieldOffset<ReprC<_, u8, u8, u8>, u8, Aligned> = OFF!(ReprC, a);
     let _: FieldOffset<ReprC<u8, _, u8, u8>, u16, Aligned> = PUB_OFF!(ReprC, b);
 
-    let _: FieldOffset<_, (), Aligned> = OFF!(ReprC, a);
-    let _: FieldOffset<_, (), Aligned> = PUB_OFF!(ReprC, a);
+    let _: FieldOffset<ReprC, (), Aligned> = OFF!(ReprC, a);
+    let _: FieldOffset<ReprC, (), Aligned> = PUB_OFF!(ReprC, a);
 
-    let _: FieldOffset<_, (), Aligned> = OFF!(ReprC, b);
-    let _: FieldOffset<_, (), Aligned> = PUB_OFF!(ReprC, b);
+    let _: FieldOffset<ReprC, (), Aligned> = OFF!(ReprC, b);
+    let _: FieldOffset<ReprC, (), Aligned> = PUB_OFF!(ReprC, b);
 };
 
 #[test]

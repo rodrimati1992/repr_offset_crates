@@ -108,7 +108,33 @@ where
 pub type FieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubField;
 
 /// Gets the alignment of a public field in the `GetPubFieldOffset<FN>` impl for `This`.
-pub type FieldAlignment<This, FN> = <This as GetPubFieldOffset<FN>>::Alignment;
+pub type FieldAlignment<This, FN> = <This as GetPubFieldOffset<FN>>::PubAlignment;
+
+////////////////////////////////////////////////////////////////////////////////
+
+/// Gets the type of a (potentially) private field in the `GetFieldOffset<FN>` impl for `This`.
+///
+/// # Warning
+///
+/// Because the field may be private this can break when asking for
+/// the type of fields in types from external crates.
+pub type PrivFieldType<This, FN> = <This as GetFieldOffset<FN>>::Field;
+
+/// Gets the alignment of a (potentially) private field in the `GetFieldOffset<FN>` impl for `This`.
+///
+/// # Warning
+///
+/// Because the field may be private this can break when asking for
+/// the alignment of fields in types from external crates.
+pub type PrivFieldAlignment<This, FN> = <This as GetFieldOffset<FN>>::Alignment;
+
+/// Gets the privacy of a field in the `GetFieldOffset<FN>` impl for `This`.
+///
+/// # Warning
+///
+/// Because the field may be private this can break when asking for
+/// the privacy of fields in types from external crates.
+pub type FieldPrivacy<This, FN> = <This as GetFieldOffset<FN>>::Privacy;
 
 //////////////////////////////////////////////////////////////////////////////////
 

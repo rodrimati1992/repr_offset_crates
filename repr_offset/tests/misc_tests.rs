@@ -6,6 +6,7 @@ mod misc_tests_submod {
     mod derive_macro;
     mod ext_traits;
     mod from_examples;
+    mod get_field_offset_trait;
     mod misc_fieldoffsets_methods;
     mod off_macros;
     mod packed_struct_offsets;

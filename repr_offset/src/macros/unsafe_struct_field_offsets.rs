@@ -190,7 +190,7 @@ macro_rules! unsafe_struct_field_offsets{
                 )
                 offsets($(
                     $(#[$const_attr])*
-                    ($( pub $(($($inn:tt)*))? )?) $offset, $field_ident: $field_ty;
+                    ($( pub $(($($inn)*))? )?) $offset, $field_ident: $field_ty;
                 )*)
             }
         }

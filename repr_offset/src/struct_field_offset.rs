@@ -206,6 +206,15 @@ pub struct FOGhosts<S, F, A> {
     pub alignment: PhantomData<fn() -> A>,
 }
 
+impl<S, F, A> Copy for FOGhosts<S, F, A> {}
+
+impl<S, F, A> Clone for FOGhosts<S, F, A> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
 impl<S, F, A> FOGhosts<S, F, A> {
     const NEW: Self = Self {
         struct_: PhantomData,
@@ -301,7 +310,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
             offset,
-            _marker: FOGhosts::NEW,
+            tys: FOGhosts::NEW,
         }
     }
 
@@ -310,7 +319,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     const fn priv_new(offset: usize) -> Self {
         Self {
             offset,
-            _marker: FOGhosts::NEW,
+            tys: FOGhosts::NEW,
         }
     }
 
@@ -372,7 +381,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
 
         FieldOffset {
             offset,
-            _marker: FOGhosts::NEW,
+            tys: FOGhosts::NEW,
         }
     }
 }
@@ -382,7 +391,7 @@ impl FieldOffset<(), (), Aligned> {
     pub const fn identity<T>() -> FieldOffset<T, T, Aligned> {
         FieldOffset {
             offset: 0,
-            _marker: FOGhosts::NEW,
+            tys: FOGhosts::NEW,
         }
     }
 }
@@ -673,7 +682,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const fn to_unaligned(self) -> FieldOffset<S, F, Unaligned> {
         FieldOffset {
             offset: self.offset,
-            _marker: FOGhosts::NEW,
+            tys: FOGhosts::NEW,
         }
     }
 

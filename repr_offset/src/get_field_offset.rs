@@ -130,6 +130,13 @@ impl<S, V, FN, F, A> InitPrivOffset<S, V, FN, F, A> {
         }
     }
 
+    const unsafe fn cast<SS>(self) -> InitPrivOffset<SS, V, FN, F, A> {
+        InitPrivOffset {
+            offset: FieldOffset::new(self.offset.offset()),
+            _associated_consts_from: crate::utils::MakePhantomData::FN_RET,
+        }
+    }
+
     const fn to_private_field_offset(self) -> FieldOffsetWithVis<S, V, FN, F, A> {
         FieldOffsetWithVis {
             offset: self.offset,
@@ -210,3 +217,21 @@ pub fn loop_create_val<S>(_: PhantomData<fn() -> S>) -> S {
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+
+#[doc(hidden)]
+pub mod r#unsafe {
+    use super::*;
+
+    #[allow(non_camel_case_types)]
+    pub struct unsafe_get_private_field<S, FN>(S, FN);
+
+    impl<S, FN> unsafe_get_private_field<S, FN>
+    where
+        S: GetFieldOffset<FN>,
+    {
+        #[doc(hidden)]
+        #[allow(non_upper_case_globals)]
+        pub const __unsafe__GET_PRIVATE_FIELD_OFFSET: FieldOffset<S, S::Field, S::Alignment> =
+            unsafe { <S as GetFieldOffset<FN>>::OFFSET_WITH_VIS.private_field_offset() };
+    }
+}

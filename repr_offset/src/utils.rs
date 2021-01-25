@@ -80,6 +80,15 @@ mod tests {
 ////////////////////////////////////////////////////////////////////////////////
 
 #[doc(hidden)]
+#[repr(transparent)]
+pub struct AsPhantomDataFn<'s, T> {
+    pub reference: &'s T,
+    pub ty: PhantomData<fn() -> T>,
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+#[doc(hidden)]
 pub trait AsPhantomData: Sized {
     #[doc(hidden)]
     const __REPR_OFFSET_PHANTOMDATA: PhantomData<Self> = PhantomData;
@@ -89,3 +98,25 @@ pub trait AsPhantomData: Sized {
 }
 
 impl<T> AsPhantomData for T {}
+
+////////////////////////////////////////////////////////////////////////////////
+
+pub unsafe trait PointerTarget {
+    type Target;
+}
+
+unsafe impl<T> PointerTarget for &T {
+    type Target = T;
+}
+
+unsafe impl<T> PointerTarget for &mut T {
+    type Target = T;
+}
+
+unsafe impl<T> PointerTarget for *const T {
+    type Target = T;
+}
+
+unsafe impl<T> PointerTarget for *mut T {
+    type Target = T;
+}

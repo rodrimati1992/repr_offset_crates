@@ -1,5 +1,10 @@
 This is the changelog,summarising changes in each version(some minor changes may be ommited).
 
+# 0.2.0
+
+- Renamed `CombinePacking` and `CombinePackingOut` to `CombineAlignment` and `CombineAlignmentOut`.
+
+
 # 0.1.2
 
 Changed CI to use github actions, updating readme to reflect that.

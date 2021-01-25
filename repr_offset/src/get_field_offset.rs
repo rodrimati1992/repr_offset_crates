@@ -87,6 +87,7 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
 pub trait GetPubFieldOffset<FN>: GetFieldOffset<FN, Privacy = IsPublic> {
     /// An alias for `GetFieldOffset::Field`
     type PubField;
+    type PubAlignment;
 
     /// The offset of the field.
     const OFFSET: FieldOffset<Self, Self::Field, Self::Alignment> =
@@ -98,12 +99,16 @@ where
     Ty: GetFieldOffset<FN, Privacy = IsPublic>,
 {
     type PubField = <Ty as GetFieldOffset<FN>>::Field;
+    type PubAlignment = <Ty as GetFieldOffset<FN>>::Alignment;
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
-/// Gets the type of the field in the `GetPubFieldOffset<FN>` impl for `This`.
-pub type GetFieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubField;
+/// Gets the type of a public field in the `GetPubFieldOffset<FN>` impl for `This`.
+pub type FieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubField;
+
+/// Gets the alignment of a public field in the `GetPubFieldOffset<FN>` impl for `This`.
+pub type FieldAlignment<This, FN> = <This as GetPubFieldOffset<FN>>::Alignment;
 
 //////////////////////////////////////////////////////////////////////////////////
 

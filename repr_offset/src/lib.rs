@@ -202,8 +202,8 @@ pub use repr_offset_derive::ReprOffset;
 
 pub use self::{
     alignment::{Aligned, Unaligned},
-    // ext::{ROExtAcc, ROExtOps, ROExtRawAcc, ROExtRawMutAcc, ROExtRawMutOps, ROExtRawOps},
-    get_field_offset::{GetFieldType, GetPubFieldOffset},
+    ext::{ROExtAcc, ROExtOps, ROExtRawAcc, ROExtRawMutAcc, ROExtRawMutOps, ROExtRawOps},
+    get_field_offset::{FieldType, GetPubFieldOffset},
     struct_field_offset::FieldOffset,
 };
 

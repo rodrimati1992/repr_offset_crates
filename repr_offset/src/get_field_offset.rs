@@ -1,3 +1,12 @@
+//! Trait for getting the `FieldOffset` of a field, and related items.
+//!
+//! One would implement the [`ImplsGetFieldOffset`] and [`GetFieldOffset`] traits,
+//! and use [`GetPubFieldOffset`] as a bound.
+//!
+//! [`ImplsGetFieldOffset`]: ./trait.ImplsGetFieldOffset.html
+//! [`GetFieldOffset`]: ./trait.GetFieldOffset.html
+//! [`GetPubFieldOffset`]: ./trait.GetPubFieldOffset.html
+
 use crate::{privacy::IsPublic, FieldOffset};
 
 use core::marker::PhantomData;
@@ -8,13 +17,19 @@ mod tuple_impls;
 
 /// Marker trait for types that implement `GetFieldOffset`.
 ///
-/// This is only required as a workaround for the time that `cargo doc` takes to run.
+/// This trait is required for the `GetFieldOffset` impls that
+/// get the [`FieldOffset`] of nested fields.
+///
+///
+/// [`FieldOffset`]: ../struct.FieldOffset.html
+///
+/// This is only required as a workaround to lower the time that `cargo doc` takes to run.
 pub unsafe trait ImplsGetFieldOffset: Sized {}
 
 //////////////////////////////////////////////////////////////////////////////////
 
-/// Helper type to implement `GetFieldOffset<(N0, N1, ...)>` for all types without
-/// blowing up the time that `cargo doc` takes to run.
+/// Hack use by `repr_offset` to implement `GetFieldOffset<(N0, N1, ...)>`
+/// for all types without blowing up the time that `cargo doc` takes to run.
 pub struct ImplGetNestedFieldOffset<T>(T);
 
 //////////////////////////////////////////////////////////////////////////////////
@@ -198,35 +213,125 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
 
 /// An alias of the [`GetFieldOffset`] trait for public fields.
 ///
+/// # Example
+///
+/// Defining a generic method for all types that have `a`, and `c` fields
+///
+/// ```rust
+/// use repr_offset::{
+///     for_examples::ReprC,
+///     get_field_offset::FieldType,
+///     privacy::{IsPublic, IsPrivate},
+///     tstr::TS,
+///     pub_off,
+///     Aligned, GetPubFieldOffset, ROExtAcc,
+/// };
+///
+/// use std::fmt::Debug;
+///
+/// print_a_c(&ReprC{a: 10, b: 20, c: 30, d: 40 });
+///
+/// fn print_a_c<T>(this: &T)
+/// where
+///     T: GetPubFieldOffset<TS!(a), Alignment = Aligned>,
+///     T: GetPubFieldOffset<TS!(b), Alignment = Aligned>,
+///     FieldType<T, TS!(a)>: Debug,
+///     FieldType<T, TS!(b)>: Debug,
+/// {
+///     println!("{:?}", this.f_get(pub_off!(a)));
+///     println!("{:?}", this.f_get(pub_off!(b)));
+///
+/// #   use repr_offset::get_field_offset::FieldAlignment;
+/// #   let _: FieldAlignment<T, TS!(a)> = Aligned;
+/// #   let _: FieldAlignment<T, TS!(b)> = Aligned;
+/// }
+///
+/// ```
+///
 /// [`GetFieldOffset`]: ./trait.GetFieldOffset.html
 pub trait GetPubFieldOffset<FN>: GetFieldOffset<FN, Privacy = IsPublic> {
-    /// An alias for `GetFieldOffset::Type`
-    type PubType;
-
-    /// An alias for `GetFieldOffset::Alignment`
-    type PubAlignment;
-
     /// The offset of the field.
     const OFFSET: FieldOffset<Self, Self::Type, Self::Alignment> =
         <Self as GetFieldOffset<FN>>::OFFSET_WITH_VIS.to_field_offset();
 }
 
-impl<FN, Ty> GetPubFieldOffset<FN> for Ty
-where
-    Ty: GetFieldOffset<FN, Privacy = IsPublic>,
-{
-    type PubType = <Ty as GetFieldOffset<FN>>::Type;
-    type PubAlignment = <Ty as GetFieldOffset<FN>>::Alignment;
+impl<FN, Ty> GetPubFieldOffset<FN> for Ty where Ty: GetFieldOffset<FN, Privacy = IsPublic> {}
+
+//////////////////////////////////////////////////////////////////////////////////
+
+// Hack to assert that a type implements GetPubFieldOffset,
+// while getting the associated types from GetFieldOffset.
+use alias_helpers::AssertImplsGPFO;
+mod alias_helpers {
+    use super::*;
+
+    pub type AssertImplsGPFO<This, FN> = <This as AssertPublicField<FN>>::This;
+
+    pub trait AssertPublicField<FN>: GetFieldOffset<FN, Privacy = IsPublic> {
+        type This: GetFieldOffset<FN, Privacy = IsPublic>;
+    }
+
+    impl<This, FN> AssertPublicField<FN> for This
+    where
+        This: GetFieldOffset<FN, Privacy = IsPublic>,
+    {
+        type This = This;
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////////
 
 /// Gets the type of a public field in the `GetPubFieldOffset<FN>` impl for `This`.
 ///
-pub type FieldType<This, FN> = <This as GetPubFieldOffset<FN>>::PubType;
+/// # Example
+///
+/// ```rust
+/// use repr_offset::{
+///     for_examples::ReprC,
+///     tstr::TS,
+///     FieldType,
+/// };
+///
+/// type This = ReprC<u8, &'static str, Option<usize>, bool>;
+///
+/// let _: FieldType<This, TS!(a)> = 3_u8;
+/// let _: FieldType<This, TS!(b)> = "hello";
+/// let _: FieldType<This, TS!(c)> = Some(5_usize);
+/// let _: FieldType<This, TS!(d)> = false;
+///
+/// ```
+pub type FieldType<This, FN> = <AssertImplsGPFO<This, FN> as GetFieldOffset<FN>>::Type;
 
 /// Gets the alignment of a public field in the `GetPubFieldOffset<FN>` impl for `This`.
-pub type FieldAlignment<This, FN> = <This as GetPubFieldOffset<FN>>::PubAlignment;
+///
+/// # Example
+///
+/// ```rust
+/// use repr_offset::{
+///     get_field_offset::FieldAlignment,
+///     for_examples::{ReprC, ReprPacked},
+///     tstr::TS,
+///     Aligned, Unaligned,
+/// };
+///
+/// type Inner = ReprPacked<i16, i32, i64, i128>;
+///
+/// type This = ReprC<Inner, &'static str, Option<usize>, bool>;
+///
+/// // Fields directly inside a ReprC are all aligned.
+/// let _: FieldAlignment<This, TS!(a)> = Aligned;
+/// let _: FieldAlignment<This, TS!(b)> = Aligned;
+/// let _: FieldAlignment<This, TS!(c)> = Aligned;
+/// let _: FieldAlignment<This, TS!(d)> = Aligned;
+///
+/// // Fields inside a ReprPacked are all unaligned.
+/// let _: FieldAlignment<This, TS!(a, a)> = Unaligned;
+/// let _: FieldAlignment<This, TS!(a, b)> = Unaligned;
+/// let _: FieldAlignment<This, TS!(a, c)> = Unaligned;
+/// let _: FieldAlignment<This, TS!(a, d)> = Unaligned;
+///
+/// ```
+pub type FieldAlignment<This, FN> = <AssertImplsGPFO<This, FN> as GetFieldOffset<FN>>::Alignment;
 
 ////////////////////////////////////////////////////////////////////////////////
 
@@ -236,6 +341,48 @@ pub type FieldAlignment<This, FN> = <This as GetPubFieldOffset<FN>>::PubAlignmen
 ///
 /// Because the field may be private this can break when asking for
 /// the type of fields in types from external crates.
+///
+/// # Example
+///
+/// ```rust
+/// use repr_offset::{
+///     get_field_offset::PrivFieldType,
+///     tstr::TS,
+///     unsafe_struct_field_offsets,
+/// };
+///
+/// use foo::Foo;
+///
+/// let _: PrivFieldType<Foo, TS!(x)> = 3_u8;
+/// let _: PrivFieldType<Foo, TS!(y)> = 5_u16;
+/// let _: PrivFieldType<Foo, TS!(z)> = 8_u32;
+/// let _: PrivFieldType<Foo, TS!(w)> = 13_u64;
+///
+/// mod foo {
+///     use super::*;
+///
+///     #[repr(C)]
+///     pub struct Foo {
+///         x: u8,
+///         pub(super) y: u16,
+///         pub(crate) z: u32,
+///         pub w: u64,
+///     }
+///
+///     repr_offset::unsafe_struct_field_offsets!{
+///         alignment = repr_offset::Aligned,
+///    
+///         impl[] Foo {
+///             const OFFSET_X, x: u8;
+///             pub(super) const OFFSET_Y, y: u16;
+///             pub(crate) const OFFSET_Z, z: u32;
+///             pub const OFFSET_W, w: u64;
+///         }
+///     }
+/// }
+///
+/// ```
+///
 pub type PrivFieldType<This, FN> = <This as GetFieldOffset<FN>>::Type;
 
 /// Gets the alignment of a (potentially) private field in the `GetFieldOffset<FN>` impl for `This`.
@@ -244,6 +391,59 @@ pub type PrivFieldType<This, FN> = <This as GetFieldOffset<FN>>::Type;
 ///
 /// Because the field may be private this can break when asking for
 /// the alignment of fields in types from external crates.
+///
+/// # Example
+///
+/// ```rust
+/// use repr_offset::{
+///     for_examples::ReprPacked,
+///     get_field_offset::PrivFieldAlignment,
+///     tstr::TS,
+///     Aligned, Unaligned,
+/// };
+///
+/// // Fields in ReprC are all aligned
+/// let _: PrivFieldAlignment<Foo, TS!(x)> = Aligned;
+/// let _: PrivFieldAlignment<Foo, TS!(y)> = Aligned;
+/// let _: PrivFieldAlignment<Foo, TS!(z)> = Aligned;
+/// let _: PrivFieldAlignment<Foo, TS!(w)> = Aligned;
+///
+/// // Fields in ReprPacked are all unaligned
+/// let _: PrivFieldAlignment<Foo, TS!(y, a)> = Unaligned;
+/// let _: PrivFieldAlignment<Foo, TS!(y, b)> = Unaligned;
+/// let _: PrivFieldAlignment<Foo, TS!(y, c)> = Unaligned;
+/// let _: PrivFieldAlignment<Foo, TS!(y, d)> = Unaligned;
+///
+/// mod foo {
+///     use super::*;
+///     
+///     type YField = ReprPacked<&'static str, &'static [u8], char, bool>;
+///    
+///     #[repr(C)]
+///     pub struct Foo {
+///         x: u8,
+///         pub(super) y: YField,
+///         pub(crate) z: u32,
+///         pub w: u64,
+///     }
+///
+///     repr_offset::unsafe_struct_field_offsets!{
+///         alignment =  Aligned,
+///    
+///         impl[] Foo {
+///             const OFFSET_X, x: u8;
+///             pub(super) const OFFSET_Y, y: YField;
+///             pub(crate) const OFFSET_Z, z: u32;
+///             pub const OFFSET_W, w: u64;
+///         }
+///     }
+/// }
+///
+/// use foo::Foo;
+///
+///
+/// ```
+///
 pub type PrivFieldAlignment<This, FN> = <This as GetFieldOffset<FN>>::Alignment;
 
 /// Gets the privacy of a field in the `GetFieldOffset<FN>` impl for `This`.
@@ -252,11 +452,56 @@ pub type PrivFieldAlignment<This, FN> = <This as GetFieldOffset<FN>>::Alignment;
 ///
 /// Because the field may be private this can break when asking for
 /// the privacy of fields in types from external crates.
+///
+/// # Example
+///
+/// ```rust
+/// use repr_offset::{
+///     get_field_offset::FieldPrivacy,
+///     privacy::{IsPrivate, IsPublic},
+///     tstr::TS,
+///     Aligned,
+/// };
+///
+/// let _: FieldPrivacy<Foo, TS!(x)> = IsPrivate;
+/// let _: FieldPrivacy<Foo, TS!(y)> = IsPrivate;
+/// let _: FieldPrivacy<Foo, TS!(z)> = IsPrivate;
+/// let _: FieldPrivacy<Foo, TS!(w)> = IsPublic;
+///
+/// mod foo {
+///     use super::*;
+///
+///     #[repr(C)]
+///     pub struct Foo {
+///         x: u8,
+///         pub(super) y: u16,
+///         pub(crate) z: u32,
+///         pub w: u64,
+///     }
+///
+///     repr_offset::unsafe_struct_field_offsets!{
+///         alignment = repr_offset::Aligned,
+///    
+///         impl[] Foo {
+///             const OFFSET_X, x: u8;
+///             pub(super) const OFFSET_Y, y: u16;
+///             pub(crate) const OFFSET_Z, z: u32;
+///             pub const OFFSET_W, w: u64;
+///         }
+///     }
+/// }
+///
+/// use foo::Foo;
+///
+///
+///
+/// ```
+///
 pub type FieldPrivacy<This, FN> = <This as GetFieldOffset<FN>>::Privacy;
 
 //////////////////////////////////////////////////////////////////////////////////
 
-/// An wrapper around a [`FieldOffset`], with a visibility type parameter
+/// A wrapper around a [`FieldOffset`], with a visibility type parameter
 /// (whether the field is pub or not).
 ///
 /// # Type parameters

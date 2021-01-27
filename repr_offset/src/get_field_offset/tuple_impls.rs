@@ -1,10 +1,9 @@
 use crate::{
     alignment::{Aligned, Alignment, CombineAlignment},
     get_field_offset::{
-        GetFieldOffset, ImplGetNestedFieldOffset, ImplsGetFieldOffset, InitPrivOffset,
+        FieldOffsetWithVis, GetFieldOffset, ImplGetNestedFieldOffset, ImplsGetFieldOffset,
     },
     privacy::{CombinePrivacy, IsPublic, Privacy},
-    FieldOffset,
 };
 
 macro_rules! tuple_impl {
@@ -22,19 +21,19 @@ macro_rules! tuple_impl {
             T: ImplsGetFieldOffset,
             ImplGetNestedFieldOffset<T>: GetFieldOffset<($($field,)*)>
         {
-            type Field = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Field;
+            type Type = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Type;
             type Alignment = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Alignment;
             type Privacy = <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::Privacy;
 
-            const INIT_OFFSET_WITH_VIS: InitPrivOffset<
+            const OFFSET_WITH_VIS: FieldOffsetWithVis<
                 Self,
                 Self::Privacy,
                 ($($field,)*),
-                Self::Field,
+                Self::Type,
                 Self::Alignment,
             > = unsafe{
-                <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::INIT_OFFSET_WITH_VIS
-                    .cast()
+                <ImplGetNestedFieldOffset<T> as GetFieldOffset<($($field,)*)>>::OFFSET_WITH_VIS
+                    .cast_struct()
             };
         }
 
@@ -44,18 +43,18 @@ macro_rules! tuple_impl {
         where
             $first: ImplsGetFieldOffset,
             $(
-                $tp: GetFieldOffset<$field, Field = $tp_trail>,
+                $tp: GetFieldOffset<$field, Type = $tp_trail>,
             )*
             ($($tp::Alignment,)*): CombineAlignment<Aligned, Output = CombAlign>,
             ($($tp::Privacy,)*): CombinePrivacy<IsPublic, Output = CombPriv>,
             CombAlign: Alignment,
             CombPriv: Privacy,
         {
-            type Field = $last;
+            type Type = $last;
             type Alignment = CombAlign;
             type Privacy = CombPriv;
 
-            const INIT_OFFSET_WITH_VIS: InitPrivOffset<
+            const OFFSET_WITH_VIS: FieldOffsetWithVis<
                 Self,
                 Self::Privacy,
                 ($($field,)*),
@@ -71,7 +70,7 @@ macro_rules! tuple_impl {
                     )*
                 };
 
-                InitPrivOffset::new(FieldOffset::new(offset))
+                FieldOffsetWithVis::new(offset)
             };
         }
     };

@@ -11,8 +11,8 @@ type SD = TS!(d);
 
 fn call_all_ops_methods<S, A>(mut make_both: impl FnMut() -> (S, S))
 where
-    S: GetPubFieldOffset<SB, Field = usize, Alignment = A>,
-    S: GetPubFieldOffset<SD, Field = usize, Alignment = A>,
+    S: GetPubFieldOffset<SB, Type = usize, Alignment = A>,
+    S: GetPubFieldOffset<SD, Type = usize, Alignment = A>,
     S: ROExtAcc + ROExtOps<A>,
     *const S: ROExtRawAcc + ROExtRawOps<A, Target = S>,
     *mut S: ROExtRawMutAcc + ROExtRawMutOps<A, Target = S>,

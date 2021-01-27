@@ -15,6 +15,8 @@ use crate::{
     utils::Mem,
 };
 
+use crate::get_field_offset::FieldOffsetWithVis;
+
 use core::{
     fmt::{self, Debug},
     marker::PhantomData,
@@ -551,7 +553,35 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const fn offset(self) -> usize {
         self.offset
     }
+}
 
+impl<S, F, A> FieldOffset<S, F, A> {
+    /// Converts this FieldOffset into a [`FieldOffsetWithVis`].
+    ///
+    /// # Safety
+    ///
+    /// The `V` type parameter must be:
+    /// - `[`IsPublic`]`: When the field is `pub`.
+    ///
+    /// - [`IsPrivate`]: When the field has the default (private) visibility,
+    /// or has a visibility smaller or equal to `pub(crate)`.
+    ///
+    /// The `FN` type parameter must be the name of the field using the
+    /// `repr_offset::tstr::TS` macro,
+    /// eg: `TS!(foo)` for the `foo` field.
+    ///
+    /// [`IsPublic`]: ../privacy/struct.IsPublic.html
+    /// [`IsPrivate`]: ../privacy/struct.IsPrivate.html
+    ///
+    /// [`FieldOffsetWithVis`] ./get_field_offset/struct.FieldOffsetWithVis.html
+    ///
+    #[inline(always)]
+    pub const unsafe fn with_vis<V, FN>(self) -> FieldOffsetWithVis<S, V, FN, F, A> {
+        FieldOffsetWithVis::from_fieldoffset(self)
+    }
+}
+
+impl<S, F, A> FieldOffset<S, F, A> {
     /// Changes the `S` type parameter, most useful for `#[repr(transparent)]` wrappers.
     ///
     /// # Safety

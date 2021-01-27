@@ -15,8 +15,48 @@
 //! Here is the code to import all of the extension traits for convenience:
 //! ```rust
 //! use repr_offset::{ROExtAcc, ROExtOps, ROExtRawAcc, ROExtRawMutAcc, ROExtRawOps, ROExtRawMutOps};
+//! ```
+//!
+//! # Examples
+//!
+//! # Initializing Types
+//!
+//! ```rust
+//! use repr_offset::{
+//!     for_examples::ReprC,
+//!     off,
+//!     ROExtRawMutOps,
+//! };
+//!
+//! use std::mem::MaybeUninit;
+//!
+//! type This = ReprC<String, Vec<u8>, usize, Option<char>>;
+//!
+//! let this = unsafe{
+//!     let mut uninit = MaybeUninit::<This>::uninit();
+//!     initialize_this(uninit.as_mut_ptr());
+//!     uninit.assume_init()
+//! };
+//!
+//! assert_eq!(this.a, "foo");
+//! assert_eq!(this.b, [3, 5, 8]);
+//! assert_eq!(this.c, 13);
+//! assert_eq!(this.d, Some('_'));
+//!
+//! /// Initializes `this`
+//! ///
+//! /// # Safety
+//! ///
+//! /// The passed in pointer must point to an aligned, allocated `This` (including on the stack).
+//! unsafe fn initialize_this(this: *mut This) {
+//!     this.f_write(off!(a), "foo".to_string());
+//!     this.f_write(off!(b), vec![3, 5, 8]);
+//!     this.f_write(off!(c), 13_usize);
+//!     this.f_write(off!(d), Some('_'));
+//! }
 //!
 //! ```
+//!
 //!
 //!
 //! [`ROExtAcc`]: ./trait.ROExtAcc.html
@@ -34,6 +74,55 @@ use crate::{Aligned, FieldOffset};
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
 ///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
+/// # Examples
+///
+/// ### Unaligned field pointers
+///
+/// Getting raw pointers to all fields in a packed struct.
+///
+/// ```rust
+/// # #![deny(safe_packed_borrows)]
+/// use repr_offset::{
+///     for_examples::ReprPacked,
+///     ROExtAcc,
+///     off,
+/// };
+///
+/// type This = ReprPacked<u8, Option<usize>, &'static [u16], &'static str>;
+///
+/// let value: This = ReprPacked {
+///     a: 3,
+///     b: Some(5),
+///     c: &[0, 1, 2],
+///     d: "hello",
+/// };
+///
+/// unsafe {
+///     let (a_ptr, b_ptr, c_ptr, d_ptr) = get_field_ptrs(&value);
+///     assert_eq!(a_ptr.read_unaligned(), 3);
+///     assert_eq!(b_ptr.read_unaligned(), Some(5));
+///     assert_eq!(c_ptr.read_unaligned(), &[0, 1, 2]);
+///     assert_eq!(d_ptr.read_unaligned(), "hello");
+/// }
+///
+/// // Note: the mutable version of this function couldn't use `f_get_mut_ptr`,
+/// //       it must use `ROExtRawMutAcc::f_raw_get_mut`
+/// fn get_field_ptrs(
+///     this: &This,
+/// ) -> (*const u8, *const Option<usize>, *const &'static [u16], *const &'static str) {
+///     (
+///         this.f_get_ptr(off!(a)),
+///         this.f_get_ptr(off!(b)),
+///         this.f_get_ptr(off!(c)),
+///         this.f_get_ptr(off!(d)),
+///     )
+/// }
+///
+/// ```
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 //
@@ -194,6 +283,11 @@ pub unsafe trait ROExtAcc: Sized {
 /// Extension trait for (mutable) references to do generic field operations,
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
+///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
 /// # Alignment
 ///
 /// The `A` type parameter is the [`Alignment`] of the field,
@@ -204,6 +298,8 @@ pub unsafe trait ROExtAcc: Sized {
 /// [`Alignment`]: ../alignment/trait.Alignment.html
 /// [`Aligned`]: ../alignment/struct.Aligned.html
 /// [`Unaligned`]: ../alignment/struct.Unaligned.html
+///
+///
 //
 // This trait is implemented in src/struct_field_offset/repr_offset_ext_impls.rs
 //
@@ -316,6 +412,54 @@ pub unsafe trait ROExtOps<A>: ROExtAcc {
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
 ///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
+/// # Example
+///
+/// This example shows how you can get references to known aligned fields from a raw pointer
+/// to a partially initialized value..
+///
+/// ```rust
+/// # #![deny(safe_packed_borrows)]
+/// use repr_offset::{
+///     for_examples::ReprC,
+///     off,
+///     ROExtRawAcc, ROExtRawMutOps,
+/// };
+///
+/// use std::mem::MaybeUninit;
+///
+/// type This = ReprC<u8, Option<usize>, &'static [u16], &'static str>;
+///
+/// let mut uninit = MaybeUninit::<This>::uninit();
+///
+/// unsafe {
+///     let ptr = uninit.as_mut_ptr();
+///     ptr.f_write(off!(a), 3);
+///     ptr.f_write(off!(b), Some(5));
+///
+///     let (a, b) = get_init_refs(&uninit);
+///     assert_eq!(*a, 3);
+///     assert_eq!(*b, Some(5));
+/// }
+///
+/// /// # Safety
+/// ///
+/// /// The fields up to and including `b` must be initialized.
+/// unsafe fn get_init_refs(this: &MaybeUninit<This>) -> (&u8, &Option<usize>) {
+///     let this = this.as_ptr();
+///
+///     (
+///         &*this.f_raw_get(off!(a)),
+///         &*this.f_raw_get(off!(b)),
+///     )
+/// }
+///
+/// ```
+///
+///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 //
 // This trait is implemented in src/struct_field_offset/repr_offset_ext_impls.rs
@@ -325,7 +469,7 @@ pub unsafe trait ROExtRawAcc: crate::utils::PointerTarget {
     /// # Safety
     ///
     /// `self` must point to some allocated object,
-    /// which is as large as the type that it points to.
+    /// allocated at least up to the field (inclusive).
     ///
     /// # Example
     ///
@@ -357,18 +501,24 @@ pub unsafe trait ROExtRawAcc: crate::utils::PointerTarget {
     ///     assert_eq!(copy_fields(&value), (3, 13));
     /// }
     ///
+    ///
+    /// /// Copies the `a` and `d.c` fields in this.
+    /// ///
+    /// /// # Safety
+    /// ///
+    /// /// The `a` and `d.c` fields in this must be initialized
     /// unsafe fn copy_fields<T, O, U>(
-    ///     ptr: *const T,
+    ///     this: *const T,
     /// ) -> (O, U)
     /// where
-    ///     T: GetPubFieldOffset<TS!(a), Field = O>,
-    ///     T: GetPubFieldOffset<TS!(d,c), Field = U>,
+    ///     T: GetPubFieldOffset<TS!(a), Type = O>,
+    ///     T: GetPubFieldOffset<TS!(d,c), Type = U>,
     ///     O: Copy,
     ///     U: Copy,
     /// {
     ///     (
-    ///         ptr.f_raw_get(pub_off!(a)).read_unaligned(),
-    ///         ptr.f_raw_get(pub_off!(d.c)).read_unaligned(),
+    ///         this.f_raw_get(pub_off!(a)).read_unaligned(),
+    ///         this.f_raw_get(pub_off!(d.c)).read_unaligned(),
     ///     )
     /// }
     ///
@@ -382,6 +532,67 @@ pub unsafe trait ROExtRawAcc: crate::utils::PointerTarget {
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
 ///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
+/// # Example
+///
+/// This example demonstrates how you can get mutable references to the known initialized
+/// parts of a struct.
+///
+/// ```rust
+/// # #![deny(safe_packed_borrows)]
+/// use repr_offset::{
+///     for_examples::ReprC,
+///     tstr::TS,
+///     off,
+///     ROExtRawOps, ROExtRawMutAcc, ROExtRawMutOps,
+/// };
+///
+/// use std::mem::MaybeUninit;
+///
+/// type This = ReprC<u8, Option<usize>, &'static [u16], &'static str>;
+///
+/// let mut uninit = MaybeUninit::<This>::uninit();
+///
+/// unsafe {
+///     let ptr = uninit.as_mut_ptr();
+///     ptr.f_write(off!(a), 3);
+///     ptr.f_write(off!(b), Some(5));
+/// }
+/// {
+///     // Safety: We know that the a and b fields were initialized above.
+///     let (a, b) = unsafe{ get_mut_refs(&mut uninit) };
+///     assert_eq!(*a, 3);
+///     assert_eq!(*b, Some(5));
+///     *a += 100;
+///     *b.as_mut().unwrap() += 200;
+/// }
+/// unsafe {
+///     let ptr = uninit.as_ptr();
+///     assert_eq!(ptr.f_read_copy(off!(a)), 103);
+///     assert_eq!(ptr.f_read_copy(off!(b)), Some(205));
+/// }
+///
+/// /// Gets mutable references to the `a` and `b` fields in `this`
+/// ///
+/// /// # Safety
+/// ///
+/// /// The fields up to and including `b` must be initialized.
+/// unsafe fn get_mut_refs(this: &mut MaybeUninit<This>) -> (&mut u8, &mut Option<usize>) {
+///     let this = this.as_mut_ptr();
+///
+///     let ptrs = (
+///         this.f_raw_get_mut(off!(a)),
+///         this.f_raw_get_mut(off!(b)),
+///     );
+///
+///     (&mut *ptrs.0, &mut *ptrs.1)
+/// }
+///
+/// ```
+///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 //
 // This trait is implemented in src/struct_field_offset/repr_offset_ext_impls.rs
@@ -391,7 +602,7 @@ pub unsafe trait ROExtRawMutAcc: ROExtRawAcc {
     /// # Safety
     ///
     /// `self` must point to some allocated object,
-    /// which is as large as the type that it points to.
+    /// allocated at least up to the field (inclusive).
     ///
     /// # Example
     ///
@@ -446,6 +657,11 @@ pub unsafe trait ROExtRawMutAcc: ROExtRawAcc {
 /// Extension trait for raw pointers to do generic field operations,
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
+///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
 /// # Alignment
 ///
 /// The `A` type parameter is the [`Alignment`] of the field,
@@ -466,6 +682,7 @@ pub unsafe trait ROExtRawOps<A>: ROExtRawAcc {
     /// You must ensure these properties about the pointed-to value:
     ///
     /// - The value must be in an allocated object (this includes the stack)
+    /// allocated at least up to the field (inclusive).
     ///
     /// - The field must be initialized
     ///
@@ -510,6 +727,7 @@ pub unsafe trait ROExtRawOps<A>: ROExtRawAcc {
     /// You must ensure these properties about the pointed-to value:
     ///
     /// - The value must be in an allocated object (this includes the stack)
+    /// allocated at least up to the field (inclusive).
     ///
     /// - The field must be initialized
     ///
@@ -549,6 +767,10 @@ pub unsafe trait ROExtRawOps<A>: ROExtRawAcc {
 /// Extension trait for mutable raw pointers to do generic field operations,
 /// where the field is determined by a [`FieldOffset`] parameter.
 ///
+/// # Safety
+///
+/// This trait must not to be implemented outside the `repr_offset` crate.
+///
 /// # Alignment
 ///
 /// The `A` type parameter is the [`Alignment`] of the field,
@@ -559,6 +781,55 @@ pub unsafe trait ROExtRawOps<A>: ROExtRawAcc {
 /// [`Alignment`]: ../alignment/trait.Alignment.html
 /// [`Aligned`]: ../alignment/struct.Aligned.html
 /// [`Unaligned`]: ../alignment/struct.Unaligned.html
+///
+/// # Example
+///
+/// This example shows how you can do the equivalent of `std::mem::replace`
+/// in partially initialized structs.
+///
+/// ```rust
+/// # #![deny(safe_packed_borrows)]
+/// use repr_offset::{
+///     for_examples::ReprPacked,
+///     utils::moved,
+///     ROExtRawMutOps, off,
+/// };
+///
+/// let mut value = ReprPacked {
+///     a: false,
+///     b: None,
+///     c: "",
+///     d: [0u64; 10],
+/// };
+///
+/// let (a, b) = unsafe{ replace_fields(&mut value, true, Some('!')) };
+///
+/// assert_eq!(moved(a), false);
+/// assert_eq!(moved(value.a), true);
+///
+/// assert_eq!(moved(b), None);
+/// assert_eq!(moved(value.b), Some('!'));
+///
+/// assert_eq!(moved(value.c), "");
+///
+///
+/// /// Replaces the `a` and `b` fields in `this`
+/// ///
+/// /// # Safety
+/// ///
+/// /// The fields up to and including `b` must be initialized.
+/// unsafe fn replace_fields(
+///     this: *mut ReprPacked<bool, Option<char>, &'static str, [u64; 10]>,
+///     a: bool,
+///     b: Option<char>,
+/// ) -> (bool, Option<char>) {
+///     (
+///         this.f_replace_raw(off!(a), a),
+///         this.f_replace_raw(off!(b), b),
+///     )
+/// }
+/// ```
+///
 //
 // This trait is implemented in src/struct_field_offset/repr_offset_ext_impls.rs
 pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
@@ -570,6 +841,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` must point to an allocated object (this includes the stack)
+    /// allocated at least up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), `self` must be an aligned pointer.
@@ -617,6 +889,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` and `source` must point to an allocated object (this includes the stack)
+    /// allocated at lest up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), both `self` and `source` must be aligned pointers.
@@ -683,6 +956,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` and `source` must point to an allocated object (this includes the stack)
+    /// allocated at lest up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), both `self` and `source` must be aligned pointers.
@@ -749,6 +1023,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` must point to an allocated object (this includes the stack)
+    /// allocated at lest up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), `self` must be an aligned pointers.
@@ -793,6 +1068,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` and `source` must point to an allocated object (this includes the stack)
+    /// allocated at lest up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), both `self` and `source` must be aligned pointers.
@@ -863,6 +1139,7 @@ pub unsafe trait ROExtRawMutOps<A>: ROExtRawMutAcc {
     /// You must ensure these properties:
     ///
     /// - `self` and `source` must point to an allocated object (this includes the stack)
+    /// allocated at lest up to the field (inclusive).
     ///
     /// - If the passed in `offset` is a `FieldOffset<_, _, Aligned>`
     /// (because it is for an aligned field), both `self` and `source` must be aligned pointers.

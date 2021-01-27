@@ -41,7 +41,11 @@
 ///
 /// The optional `impl_GetFieldOffset` parameter determines whether `$self`
 /// implements the [`GetFieldOffset`] trait,
-/// which allows getting the [`FieldOffset`] for each field using the [`OFF`] and [`off`] macros.
+/// which allows getting the [`FieldOffset`] for each field using the
+/// [`OFF`](./macro.OFF.html),
+/// [`off`](./macro.off.html),
+/// [`PUB_OFF`](./macro.PUB_OFF.html), and
+/// [`pub_off`](./macro.pub_off.html) macros.
 ///
 /// The valid values for this parameter are:
 /// - (not passing this parameter): Implements [`GetFieldOffset`].
@@ -54,8 +58,6 @@
 /// [`Aligned`]: ./struct.Aligned.html
 /// [`Unaligned`]: ./struct.Unaligned.html
 /// [`FieldOffset`]: ./struct.FieldOffset.html
-/// [`OFF`]: ./macro.OFF.html
-/// [`off`]: ./macro.off.html
 /// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 ///
 /// # Examples
@@ -237,13 +239,11 @@ macro_rules! _priv_usfoi{
     (@val false, $Self:ty, $prev:expr, $prev_ty:ty, $next_ty:ty )=>{
         $prev.next_field_offset()
     };
-    (@InitPrivOffset false, $expr:expr)=>{
-        $crate::pmr::InitPrivOffset::new($expr)
+    (@FieldOffsetWithVis false, $expr:expr)=>{
+        $crate::pmr::FieldOffsetWithVis::from_fieldoffset($expr)
     };
-    (@InitPrivOffset true, $expr:expr)=>{unsafe{
-        $crate::pmr::InitPrivOffset::new(
-            $crate::FieldOffset::new($expr)
-        )
+    (@FieldOffsetWithVis true, $expr:expr)=>{unsafe{
+        $crate::pmr::FieldOffsetWithVis::new($expr)
     }};
 
     (
@@ -331,21 +331,19 @@ macro_rules! _priv_impl_getfieldoffset{
             unsafe impl<$($impl_params)*> $crate::pmr::GetFieldOffset<__Key> for $self
             where $($where)*
             {
-                type Field = $field_ty;
+                type Type = $field_ty;
                 type Alignment = $alignment;
                 type Privacy = __Privacy;
 
-                const INIT_OFFSET_WITH_VIS: $crate::pmr::InitPrivOffset<
+                const OFFSET_WITH_VIS: $crate::pmr::FieldOffsetWithVis<
                     Self,
                     __Privacy,
                     __Key,
-                    Self::Field,
+                    Self::Type,
                     $alignment,
-                > = $crate::_priv_usfoi!(
-                    @InitPrivOffset
-                    $usize_offsets,
-                    Self::$offset
-                );
+                > = unsafe{
+                    $crate::_priv_usfoi!( @FieldOffsetWithVis $usize_offsets, Self::$offset)
+                };
             }
         }
     };

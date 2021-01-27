@@ -219,6 +219,6 @@ pub mod pmr {
 
     pub use crate::get_field_offset::{
         loop_create_fo, loop_create_mutref, loop_create_val, FieldOffsetWithVis, GetFieldOffset,
-        GetPubFieldOffset, ImplsGetFieldOffset, InitPrivOffset,
+        GetPubFieldOffset, ImplsGetFieldOffset,
     };
 }

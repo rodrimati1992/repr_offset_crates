@@ -37,10 +37,7 @@ pub struct ImplGetNestedFieldOffset<T>(T);
 /// For getting the offset of a field given its name.
 ///
 /// This trait exists to make it possible for the
-/// [`OFF`](./macro.OFF.html),
-/// [`off`](./macro.off.html),
-/// [`PUB_OFF`](./macro.PUB_OFF.html), and
-/// [`pub_off`](./macro.pub_off.html) macros
+/// [`OFF!`], [`off`], [`PUB_OFF!`], and [`pub_off`] macros
 /// to get the [`FieldOffset`] of a field.
 ///
 /// This trait is by default implemented by the [`unsafe_struct_field_offsets`] macro,
@@ -169,7 +166,13 @@ pub struct ImplGetNestedFieldOffset<T>(T);
 ///
 /// [`FieldOffset`]: ../struct.FieldOffset.html
 ///
-/// [`GetPubFieldOffset`]: ../struct.GetPubFieldOffset.html
+/// [`GetPubFieldOffset`]: ./trait.GetPubFieldOffset.html
+///
+/// [`OFF!`]: ../macro.OFF.html
+/// [`off`]: ../macro.off.html
+/// [`PUB_OFF!`]: ../macro.PUB_OFF.html
+/// [`pub_off`]: ../macro.pub_off.html
+///
 ///
 ///
 pub unsafe trait GetFieldOffset<FN>: Sized {
@@ -263,7 +266,8 @@ impl<FN, Ty> GetPubFieldOffset<FN> for Ty where Ty: GetFieldOffset<FN, Privacy =
 // while getting the associated types from GetFieldOffset.
 use alias_helpers::AssertImplsGPFO;
 mod alias_helpers {
-    use super::*;
+    use super::GetFieldOffset;
+    use crate::privacy::IsPublic;
 
     pub type AssertImplsGPFO<This, FN> = <This as AssertPublicField<FN>>::This;
 
@@ -676,7 +680,8 @@ pub fn loop_create_val<S>(_: PhantomData<fn() -> S>) -> S {
 
 #[doc(hidden)]
 pub mod r#unsafe {
-    use super::*;
+    use super::GetFieldOffset;
+    use crate::FieldOffset;
 
     #[allow(non_camel_case_types)]
     pub struct unsafe_get_private_field<S, FN>(S, FN);

@@ -28,6 +28,7 @@ pub(crate) struct ReprOffsetConfig<'a> {
 }
 
 impl<'a> ReprOffsetConfig<'a> {
+    #[allow(clippy::unnecessary_wraps)]
     fn new(roa: ReprOffsetAttrs<'a>) -> Result<Self, syn::Error> {
         let ReprOffsetAttrs {
             debug_print,
@@ -113,11 +114,11 @@ pub(crate) fn parse_attrs_for_derive<'a>(
     let ty_ctx = ParseContext::TypeAttr {
         data_variant: ds.data_variant,
     };
-    parse_inner(&mut this, ds.attrs, ty_ctx)?;
+    parse_inner(&mut this, ds.attrs, ty_ctx);
 
     for variant in &ds.variants {
         for field in variant.fields.iter() {
-            parse_inner(&mut this, field.attrs, ParseContext::Field { field })?;
+            parse_inner(&mut this, field.attrs, ParseContext::Field { field });
         }
     }
 
@@ -127,11 +128,7 @@ pub(crate) fn parse_attrs_for_derive<'a>(
 }
 
 /// Parses an individual attribute
-fn parse_inner<'a, I>(
-    this: &mut ReprOffsetAttrs<'a>,
-    attrs: I,
-    pctx: ParseContext<'a>,
-) -> Result<(), syn::Error>
+fn parse_inner<'a, I>(this: &mut ReprOffsetAttrs<'a>, attrs: I, pctx: ParseContext<'a>)
 where
     I: IntoIterator<Item = &'a Attribute>,
 {
@@ -146,7 +143,6 @@ where
             _ => {}
         }
     }
-    Ok(())
 }
 
 /// Parses an individual attribute list (A `#[attribute( .. )] attribute`).

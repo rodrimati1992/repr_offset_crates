@@ -33,17 +33,14 @@ pub(crate) fn derive(data: DeriveInput) -> Result<TokenStream2, syn::Error> {
     }
 
     let options = attribute_parsing::parse_attrs_for_derive(ds)?;
-    let output = derive_inner(&ds, &options)?;
+    let output = derive_inner(&ds, &options);
     if options.debug_print {
         panic!("\n\n\n{}\n\n\n", output);
     }
     Ok(output)
 }
 
-fn derive_inner(
-    ds: &DataStructure<'_>,
-    options: &ReprOffsetConfig<'_>,
-) -> Result<TokenStream2, syn::Error> {
+fn derive_inner(ds: &DataStructure<'_>, options: &ReprOffsetConfig<'_>) -> TokenStream2 {
     let alignment = if options.is_packed {
         quote!(Unaligned)
     } else {
@@ -93,7 +90,7 @@ fn derive_inner(
 
     let extra_bounds = options.extra_bounds.iter();
 
-    Ok(quote! {
+    quote! {
         ::repr_offset::unsafe_struct_field_offsets!{
             alignment = ::repr_offset::#alignment,
             usize_offsets = #usize_offsets,
@@ -110,7 +107,7 @@ fn derive_inner(
                 )*
             }
         }
-    })
+    }
 }
 
 fn concat_field_ident(prefix: &Ident, field_name: &FieldIdent<'_>) -> Ident {

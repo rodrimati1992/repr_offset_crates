@@ -171,7 +171,7 @@
 /// ```
 ///
 ///
-/// [`FieldOffset`]: ../../struct.FieldOffset.html
+/// [`FieldOffset`]: ./struct.FieldOffset.html
 ///
 ///
 /// # Examples

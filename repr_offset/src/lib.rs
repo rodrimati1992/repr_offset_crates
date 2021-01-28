@@ -200,11 +200,11 @@
 //!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
-// TODO: uncomment
-// #![deny(clippy::missing_safety_doc)]
-// #![deny(clippy::shadow_unrelated)]
-// #![deny(clippy::wildcard_imports)]
-// #![deny(missing_docs)]
+#![allow(clippy::empty_loop)]
+#![deny(clippy::missing_safety_doc)]
+#![deny(clippy::shadow_unrelated)]
+#![deny(clippy::wildcard_imports)]
+#![deny(missing_docs)]
 
 #[doc(hidden)]
 pub extern crate self as repr_offset;

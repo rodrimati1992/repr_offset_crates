@@ -190,8 +190,8 @@ use core::{
 /// }
 /// ```
 ///
-/// [`Aligned`]: ./struct.Aligned.html
-/// [`Unaligned`]: ./struct.Unaligned.html
+/// [`Aligned`]: ./alignment/struct.Aligned.html
+/// [`Unaligned`]: ./alignment/struct.Unaligned.html
 ///
 /// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
@@ -311,8 +311,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// };
     ///
     /// ```
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
@@ -375,8 +375,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// ```
     ///
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     pub const unsafe fn next_field_offset<Next, NextA>(self) -> FieldOffset<S, Next, NextA> {
         let offset = GetNextFieldOffset {
             previous_offset: self.offset,
@@ -575,8 +575,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// `repr_offset::tstr::TS` macro,
     /// eg: `TS!(foo)` for the `foo` field.
     ///
-    /// [`IsPublic`]: ../privacy/struct.IsPublic.html
-    /// [`IsPrivate`]: ../privacy/struct.IsPrivate.html
+    /// [`IsPublic`]: ./privacy/struct.IsPublic.html
+    /// [`IsPrivate`]: ./privacy/struct.IsPrivate.html
     ///
     /// [`FieldOffsetWithVis`] ./get_field_offset/struct.FieldOffsetWithVis.html
     ///
@@ -632,8 +632,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// ```
     ///
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn cast_struct<S2>(self) -> FieldOffset<S2, F, A> {
         FieldOffset::new(self.offset)

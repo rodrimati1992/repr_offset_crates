@@ -56,11 +56,6 @@
 /// Note that passing the `Self` parameter unconditionally causes the type
 /// not to implement [`GetFieldOffset`].
 ///
-/// [`Aligned`]: ./struct.Aligned.html
-/// [`Unaligned`]: ./struct.Unaligned.html
-/// [`FieldOffset`]: ./struct.FieldOffset.html
-/// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
-///
 /// # Examples
 ///
 /// ### Syntax example
@@ -165,6 +160,10 @@
 ///
 /// ```
 ///
+/// [`Aligned`]: ./alignment/struct.Aligned.html
+/// [`Unaligned`]: ./alignment/struct.Unaligned.html
+/// [`FieldOffset`]: ./struct.FieldOffset.html
+/// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 ///
 /// [`FieldOffset`]: ./struct.FieldOffset.html
 /// [`ext`]: ./ext/index.html

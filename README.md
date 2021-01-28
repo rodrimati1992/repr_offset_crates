@@ -46,7 +46,10 @@ These are the cargo features in `repr_offset`:
 - `derive` (disabled by default): 
 Re-exports the `ReprOffset` derive macro from the `repr_offset_derive` crate.
 
-Example of using the "derive" feature:
+- `"for_examples"` (disabled by default): 
+Enables the `for_examples` module, with types used in documentation examples.
+
+Adding the "derive" feature to the Cargo.toml file:
 ```toml
 repr_offset = { version = "0.2", features = ["derive"] }
 ```

@@ -112,7 +112,7 @@ macro_rules! __priv_OFF_path{
     }
 }
 
-/// Gets the `FieldOffset` for a (possibly nested) field, and an optionally passed in value.
+/// Gets the [`FieldOffset`] for a (possibly nested) field, and an optionally passed in value.
 ///
 /// The value argument is only necessary when the type that the fields are
 /// from can't be inferred.
@@ -138,6 +138,7 @@ macro_rules! __priv_OFF_path{
 /// assert_eq!(this.f_get(off!(d)), &this.d);
 /// ```
 ///
+/// [`FieldOffset`]: ./struct.FieldOffset.html
 #[macro_export]
 macro_rules! off{
     ($value:expr, $($fields:tt).+ )=>{
@@ -186,7 +187,7 @@ macro_rules! off{
     }};
 }
 
-/// Gets the `FieldOffset` for a (possibly nested) public field,
+/// Gets the [`FieldOffset`] for a (possibly nested) public field,
 /// and an optionally passed in value.
 ///
 /// This is the same as the [`off`] macro,
@@ -273,7 +274,7 @@ macro_rules! pub_off{
     };
 }
 
-/// Gets the `FieldOffset` for the passed in type and (possibly nested) public field.
+/// Gets the [`FieldOffset`] for the passed in type and (possibly nested) public field.
 ///
 /// This is the same as the [`OFF`] macro,
 /// except that this can't access private fields,

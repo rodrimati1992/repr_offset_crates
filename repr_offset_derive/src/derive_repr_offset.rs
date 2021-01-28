@@ -51,6 +51,7 @@ fn derive_inner(
     };
 
     let usize_offsets = options.use_usize_offsets;
+    let impl_getfieldoffset = options.impl_getfieldoffset;
 
     let impl_generics = GenParamsIn::new(ds.generics, InWhat::ImplHeader);
 
@@ -96,6 +97,7 @@ fn derive_inner(
         ::repr_offset::unsafe_struct_field_offsets!{
             alignment = ::repr_offset::#alignment,
             usize_offsets = #usize_offsets,
+            impl_GetFieldOffset = #impl_getfieldoffset,
 
             impl[#impl_generics] #name #ty_generics
             where[

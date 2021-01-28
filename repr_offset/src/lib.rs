@@ -169,6 +169,9 @@
 //! - `derive` (disabled by default):
 //! Re-exports the `ReprOffset` derive macro from the `repr_offset_derive` crate.
 //!
+//! - `"for_examples"` (disabled by default):
+//! Enables the `for_examples` module, with types used in documentation examples.
+//!
 //! Example of using the "derive" feature::
 //! ```toml
 //! repr_offset = { version = "0.2", features = ["derive"] }
@@ -216,8 +219,6 @@ mod macros;
 #[macro_use]
 mod test_macros;
 
-pub mod docs;
-
 pub mod offset_calc;
 
 pub mod alignment;
@@ -233,6 +234,7 @@ pub mod privacy;
 pub mod for_examples {
     #[doc(inline)]
     #[cfg(any(feature = "for_examples", doc))]
+    #[cfg_attr(feature = "docsrs", doc(cfg(for_examples)))]
     pub use crate::for_examples_inner::*;
 }
 
@@ -253,10 +255,7 @@ pub mod types_for_tests;
 
 pub use tstr;
 
-/// This derive macro [is documented in here](./docs/repr_offset_macro/index.html)
-#[doc(inline)]
-#[cfg(feature = "derive")]
-pub use repr_offset_derive::ReprOffset;
+include! {"repr_offset_macro.rs"}
 
 pub use self::{
     alignment::{Aligned, Unaligned},

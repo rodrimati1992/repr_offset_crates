@@ -20,6 +20,7 @@ pub(crate) struct ReprOffsetConfig<'a> {
     // If there was a #[repr(packed)]
     pub(crate) is_packed: bool,
     pub(crate) use_usize_offsets: bool,
+    pub(crate) impl_getfieldoffset: bool,
     pub(crate) offset_prefix: Ident,
     pub(crate) field_map: FieldMap<FieldConfig>,
     pub(crate) extra_bounds: Vec<WherePredicate>,
@@ -33,6 +34,7 @@ impl<'a> ReprOffsetConfig<'a> {
             is_packed,
             is_repr_stable,
             use_usize_offsets,
+            impl_getfieldoffset,
             offset_prefix,
             field_map,
             extra_bounds,
@@ -51,6 +53,7 @@ impl<'a> ReprOffsetConfig<'a> {
             debug_print,
             is_packed,
             use_usize_offsets,
+            impl_getfieldoffset,
             offset_prefix,
             field_map,
             extra_bounds,
@@ -66,6 +69,7 @@ struct ReprOffsetAttrs<'a> {
     // If there was a #[repr(transparent)] or #[repr(C)] attribute
     is_repr_stable: bool,
     use_usize_offsets: bool,
+    impl_getfieldoffset: bool,
     offset_prefix: Ident,
     field_map: FieldMap<FieldConfig>,
     extra_bounds: Vec<WherePredicate>,
@@ -98,6 +102,7 @@ pub(crate) fn parse_attrs_for_derive<'a>(
         is_packed: false,
         is_repr_stable: false,
         use_usize_offsets: false,
+        impl_getfieldoffset: true,
         offset_prefix: Ident::new("OFFSET_", Span::call_site()),
         field_map: FieldMap::with(ds, |_| FieldConfig { offset_name: None }),
         extra_bounds: vec![],
@@ -206,6 +211,8 @@ fn parse_sabi_attr<'a>(
                 this.offset_prefix = parse_lit(&lit)?;
             } else if ident == "bound" {
                 this.extra_bounds.push(parse_lit(&lit)?);
+            } else if path.is_ident("impl_GetFieldOffset") {
+                this.impl_getfieldoffset = parse_bool(&lit)?;
             } else {
                 return Err(make_err(&path));
             }
@@ -227,6 +234,13 @@ where
             lit,
             "Expected string literal containing identifier"
         )),
+    }
+}
+
+fn parse_bool(lit: &syn::Lit) -> Result<bool, syn::Error> {
+    match lit {
+        syn::Lit::Bool(x) => Ok(x.value),
+        _ => Err(spanned_err!(lit, "Expected boolean")),
     }
 }
 

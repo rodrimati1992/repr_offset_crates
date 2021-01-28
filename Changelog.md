@@ -2,7 +2,48 @@ This is the changelog,summarising changes in each version(some minor changes may
 
 # 0.2.0
 
+- Bumped MSRV to Rust 1.41.0.
+
+- Added `GetFieldOffset` trait in the new `get_field_offset` module,
+to get the `FieldOffset` for a field,
+implemented by the `unsafe_struct_field_offsets` and `ReprOffset` macros.
+
+- Defined some more itens in `get_field_offset` module. The `FieldOffsetWithVis`,and `ImplGetNestedFieldOffset` structs;
+`GetPubFieldOffset` alias for `GetFieldOFfset` with public fields;
+`ImplsGetFieldOffset` marker trait for types tha implement `GetFieldOFfset`;
+`FieldAlignment`, `FieldPrivacy`, `FieldType`, `PrivFieldAlignment`, and `PrivFieldType` type aliases, 
+
+- Added `ext` module, with these extension traits for operating on fields, given the `FieldOffset` for the field: `ROExtAcc`, `ROExtOps`, `ROExtRawAcc`, `ROExtRawMutAcc`, `ROExtRawOps`, `ROExtRawMutOps`
+
+- Added `OFF`, `PUB_OFF`, `off`, and `pub_off` macros for getting the field offset for a field.
+
+- Added `privacy` module, with `IsPrivate`, and `IsPublic` structs; `CombinePrivacy`, and `PrivacyCombine` traits; `PrivacyOut`type alias.
+
+- Added `impl_GetFieldOffset` parameter to the `unsafe_struct_field_offsets` macro,
+to diasble the GetFieldOffset impls. Now the `Self = Foo,` parameter implies `impl_GetFieldOffset = false`.
+
+- Added `#[roff(impl_GetFieldOffset = false)]` helper attribute to `ReprOffset` derive.
+
+- Added tstr `0.2` as a dependency.
+
+- Added these reexports in the root module:
+`tstr` crate, all traits from `ext` module, get_field_offset::{GetFieldOffset, FieldType}.
+
+- Moved the docs for `ReprOffset` to the reexport.
+
+- Made the `alignment` module (where `Aligned` and `Unaligned` are declared) public
+
 - Renamed `CombinePacking` and `CombinePackingOut` to `CombineAlignment` and `CombineAlignmentOut`.
+
+- Removed reexports of `Alignment`, `CombineAlignment`, and `CombineAlignmentOut`.
+
+- Added impls of `CombineAlignment` for tuples of `Aligned` and `Unaligned` permutations
+
+- Added `utils::MakePhantomData` helper struct, `utils::PointerTarget` trait.
+
+- Added `for_examples::ReprCNoGFO` for an example type that doesn't implement `GetFieldOffset`
+
+- Added `FieldOffset::identity` constructor
 
 
 # 0.1.2

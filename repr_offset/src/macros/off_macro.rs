@@ -171,11 +171,11 @@ macro_rules! off{
         if false {
             $crate::pmr::loop_create_fo(marker)
         } else {
-            if false {
+            let _ = || {
                 let value = $crate::pmr::loop_create_val(marker);
                 #[allow(unused_unsafe)]
                 unsafe{ let _ = value $(.$fields)*; }
-            }
+            };
 
             type __Key = $crate::tstr::TS!($($fields),*);
 
@@ -189,7 +189,7 @@ macro_rules! off{
 /// Gets the `FieldOffset` for a (possibly nested) public field,
 /// and an optionally passed in value.
 ///
-/// This is the same as the [`OFF`] macro,
+/// This is the same as the [`off`] macro,
 /// except that this can't access private fields,
 /// and it allows accessing fields from type parameters in generic functions.
 ///

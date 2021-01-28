@@ -101,7 +101,9 @@ impl<T> AsPhantomData for T {}
 
 ////////////////////////////////////////////////////////////////////////////////
 
+/// Gets the type pointed-to by a pointer.
 pub unsafe trait PointerTarget {
+    /// The pointed-to type.
     type Target;
 }
 

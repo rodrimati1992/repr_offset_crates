@@ -1,4 +1,4 @@
-//! Extension traits that use [`FieldOffset`] parameters to operate on fields.
+//! Extension traits that use `FieldOffset` parameters to operate on fields.
 //!
 //! These are the extension traits for each kind of type:
 //!
@@ -9,8 +9,6 @@
 //! - `*mut T`: [`ROExtRawMutAcc`] and [`ROExtRawMutOps`]
 //!
 //! # Imports
-//!
-//! There are six trait purely for performance (in debug builds) reasons.
 //!
 //! Here is the code to import all of the extension traits for convenience:
 //! ```rust

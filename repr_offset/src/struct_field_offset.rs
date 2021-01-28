@@ -126,13 +126,19 @@ use core::{
 /// <span id="nested-field-in-packed"></span>
 /// ### Accessing Nested Fields
 ///
-/// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct.
+/// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct,
+/// using the [`GetFieldOffset`] trait implemented by the [`ReprOffset`] derive,
+/// through the [`off`](./macro.off.html) macro.
 ///
 /// ```rust
 /// # #![deny(safe_packed_borrows)]
 #[cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
 #[cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
-/// use repr_offset::{Aligned, FieldOffset, Unaligned};
+/// use repr_offset::{
+///     alignment::{Aligned, Unaligned},
+///     off,
+///     FieldOffset,
+/// };
 ///
 /// #[repr(C, packed)]
 /// #[derive(ReprOffset)]
@@ -148,29 +154,27 @@ use core::{
 ///     years: usize,
 /// }
 ///
-/// const OFFY: FieldOffset<Pack, NestedC, Unaligned> = Pack::OFFSET_Y;
-///
-/// let _: FieldOffset<NestedC, &'static str, Aligned> = NestedC::OFFSET_NAME;
-/// let _: FieldOffset<NestedC, usize, Aligned> = NestedC::OFFSET_YEARS;
-///
-/// // As you can see `FieldOffset::add` combines two offsets,
-/// // allowing you to access a nested field with a single `FieldOffset`.
-/// //
-/// // These `FieldOffset`s have an `Unaligned` type argument because
-/// // OFFY is a `FieldOffset<_, _, Unaligned>`.
-/// const OFF_NAME: FieldOffset<Pack, &'static str, Unaligned> = OFFY.add(NestedC::OFFSET_NAME);
-/// const OFF_YEARS: FieldOffset<Pack, usize, Unaligned> = OFFY.add(NestedC::OFFSET_YEARS);
-///
 /// let this = Pack{
 ///     x: 0,
 ///     y: NestedC{ name: "John", years: 13 },
 /// };
 ///
-/// assert_eq!(OFF_NAME.get_copy(&this), "John" );
-/// assert_eq!(OFF_YEARS.get_copy(&this), 13 );
+/// let off_y: FieldOffset<Pack, NestedC, Unaligned> = off!(y);
+///
+/// let off_name: FieldOffset<Pack, &'static str, Unaligned> = off!(y.name);
+///
+/// // You can also get the FieldOffset for a nested field like this.
+/// let off_years: FieldOffset<Pack, usize, Unaligned> = off_y.add(off!(years));
+///
+/// // The this argument is required to call FieldOffset methods,
+/// // infering the S type parameter of FieldOffset from `this`.
+/// let _ = off!(this, y.years);
+///
+/// assert_eq!(off_name.get_copy(&this), "John" );
+/// assert_eq!(off_years.get_copy(&this), 13 );
 ///
 /// unsafe{
-///     let nested_ptr: *const NestedC = OFFY.get_ptr(&this);
+///     let nested_ptr: *const NestedC = off_y.get_ptr(&this);
 ///
 ///     // This code is undefined behavior,
 ///     // because `NestedC`'s offsets require the passed in pointer to be aligned.
@@ -191,6 +195,7 @@ use core::{
 ///
 /// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
+/// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 ///
 #[repr(transparent)]
 pub struct FieldOffset<S, F, A> {

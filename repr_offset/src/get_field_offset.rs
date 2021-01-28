@@ -190,7 +190,7 @@ pub unsafe trait GetFieldOffset<FN>: Sized {
 
     /// Whether the field is private or not, either:
     ///
-    /// - `[`IsPublic`]`: When the field is `pub`.
+    /// - [`IsPublic`]: When the field is `pub`.
     ///
     /// - [`IsPrivate`]: When the field has the default (private) visibility,
     /// or has a visibility smaller or equal to `pub(crate)`.
@@ -402,6 +402,7 @@ pub type PrivFieldType<This, FN> = <This as GetFieldOffset<FN>>::Type;
 ///     Aligned, Unaligned,
 /// };
 ///
+/// # fn main(){
 /// // Fields in ReprC are all aligned
 /// let _: PrivFieldAlignment<Foo, TS!(x)> = Aligned;
 /// let _: PrivFieldAlignment<Foo, TS!(y)> = Aligned;
@@ -413,6 +414,7 @@ pub type PrivFieldType<This, FN> = <This as GetFieldOffset<FN>>::Type;
 /// let _: PrivFieldAlignment<Foo, TS!(y, b)> = Unaligned;
 /// let _: PrivFieldAlignment<Foo, TS!(y, c)> = Unaligned;
 /// let _: PrivFieldAlignment<Foo, TS!(y, d)> = Unaligned;
+/// # }
 ///
 /// mod foo {
 ///     use super::*;
@@ -556,20 +558,20 @@ impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
     ///
     /// This method has a superset of the safety requirements of [`FieldOffset::new`].
     ///
-    /// The `FN` type parameter must be the name of the field using the
-    /// `repr_offset::tstr::TS` macro,
-    /// eg: `TS!(foo)` for the `foo` field.
-    ///
     /// The `V` type parameter must be:
-    /// - `[`IsPublic`]`: When the field is `pub`.
+    /// - [`IsPublic`]: When the field is `pub`.
     ///
     /// - [`IsPrivate`]: When the field has the default (private) visibility,
     /// or has a visibility smaller or equal to `pub(crate)`.
     ///
+    /// The `FN` type parameter must be the name of the field using the
+    /// `repr_offset::tstr::TS` macro,
+    /// eg: `TS!(foo)` for the `foo` field.
+    ///
     /// [`IsPublic`]: ../privacy/struct.IsPublic.html
     /// [`IsPrivate`]: ../privacy/struct.IsPrivate.html
     ///
-    /// [`FieldOffset::new`]: ..//struct.FieldOffset.html#method.new
+    /// [`FieldOffset::new`]: ../struct.FieldOffset.html#method.new
     /// [`FieldOffset`]: ../struct.FieldOffset.html
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
@@ -584,7 +586,7 @@ impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
     /// # Safety
     ///
     /// The `V` type parameter must be:
-    /// - `[`IsPublic`]`: When the field is `pub`.
+    /// - [`IsPublic`]: When the field is `pub`.
     ///
     /// - [`IsPrivate`]: When the field has the default (private) visibility,
     /// or has a visibility smaller or equal to `pub(crate)`.
@@ -596,7 +598,7 @@ impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
     /// [`IsPublic`]: ../privacy/struct.IsPublic.html
     /// [`IsPrivate`]: ../privacy/struct.IsPrivate.html
     ///
-    /// [`FieldOffset::new`]: ..//struct.FieldOffset.html#method.new
+    /// [`FieldOffset::new`]: ../struct.FieldOffset.html#method.new
     /// [`FieldOffset`]: ../struct.FieldOffset.html
     pub const unsafe fn from_fieldoffset(offset: FieldOffset<S, F, A>) -> Self {
         Self {
@@ -609,6 +611,8 @@ impl<S, V, FN, F, A> FieldOffsetWithVis<S, V, FN, F, A> {
 
 impl<FN, S, F, A> FieldOffsetWithVis<S, IsPublic, FN, F, A> {
     /// Unwraps this into a [`FieldOffset`] for a public field.
+    ///
+    /// [`FieldOffset`]: ../struct.FieldOffset.html
     pub const fn to_field_offset(self) -> FieldOffset<S, F, A> {
         self.offset
     }

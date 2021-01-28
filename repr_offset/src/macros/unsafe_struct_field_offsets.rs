@@ -1,4 +1,5 @@
-/// Declares a sequence of associated constants with the offsets of the listed fields.
+/// Declares a sequence of associated constants with the offsets of the listed fields,
+/// and implements the [`GetFieldOffset`] trait.
 ///
 /// # Safety
 ///
@@ -98,31 +99,51 @@
 ///
 /// ### Unaligned struct example
 ///
-/// This demonstrates how you can get a pointer to a field from a pointer to
-/// a packed struct (it's UB to use references to fields here),
-/// as well as a `FieldOffset` method to replace packed fields.
+/// This example demonstrates how you can replace fields in a packed struct,
+/// as well as getting a raw pointer to a field,
+/// using both [`FieldOffset`] methods, and extension traits from the [`ext`] module
 ///
 /// ```rust
-/// use repr_offset::{unsafe_struct_field_offsets, Unaligned};
+/// use repr_offset::{
+///     unsafe_struct_field_offsets,
+///     off,
+///     ROExtAcc, ROExtOps, Unaligned,
+/// };
 ///
-/// let mut bar = Bar{ mugs: 3, bottles: 5, table: "wooden".to_string() };
-///
-/// assert_eq!( replace_table_a(&mut bar, "metallic".to_string()), "wooden".to_string());
-/// assert_eq!( replace_table_b(&mut bar, "granite".to_string()), "metallic".to_string());
-/// assert_eq!( replace_table_b(&mut bar, "carbonite".to_string()), "granite".to_string());
-///
-/// fn replace_table_a(this: &mut Bar, replacement: String)-> String{
-///     let ptr = Bar::OFFSET_TABLE.get_mut_ptr(this);
-///     unsafe{
-///         let taken = ptr.read_unaligned();
-///         ptr.write_unaligned(replacement);
-///         taken
+/// // Replacing the table field
+/// {
+///     let mut bar = Bar{ mugs: 3, bottles: 5, table: "wooden".to_string() };
+///    
+///     assert_eq!( replace_table_a(&mut bar, "metallic".to_string()), "wooden".to_string());
+///     assert_eq!( replace_table_b(&mut bar, "granite".to_string()), "metallic".to_string());
+///     assert_eq!( replace_table_b(&mut bar, "carbonite".to_string()), "granite".to_string());
+///     
+///     fn replace_table_a(this: &mut Bar, replacement: String)-> String{
+///         Bar::OFFSET_TABLE.replace_mut(this, replacement)
+///     }
+///    
+///     fn replace_table_b(this: &mut Bar, replacement: String)-> String{
+///         this.f_replace(off!(table), replacement)
 ///     }
 /// }
 ///
-/// fn replace_table_b(this: &mut Bar, replacement: String)-> String{
-///     Bar::OFFSET_TABLE.replace_mut(this, replacement)
+/// // Getting raw pointers to fields
+/// unsafe {
+///     let bar = Bar{ mugs: 3, bottles: 5, table: "wooden".to_string() };
+///
+///     assert_eq!(get_mugs_ptr(&bar).read_unaligned(), 3);
+///
+///     assert_eq!(get_bottles_ptr(&bar).read_unaligned(), 5);
+///
+///     fn get_mugs_ptr(this: &Bar) -> *const u32 {
+///         Bar::OFFSET_MUGS.get_ptr(this)
+///     }
+///    
+///     fn get_bottles_ptr(this: &Bar) -> *const u16 {
+///         this.f_get_ptr(off!(bottles))
+///     }
 /// }
+///
 ///
 ///
 /// #[repr(C,packed)]
@@ -144,6 +165,9 @@
 ///
 /// ```
 ///
+///
+/// [`FieldOffset`]: ./struct.FieldOffset.html
+/// [`ext`]: ./ext/index.html
 ///
 #[macro_export]
 macro_rules! unsafe_struct_field_offsets{

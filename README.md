@@ -81,5 +81,11 @@ https://docs.rs/repr_offset/*/repr_offset/struct.FieldOffset.html
 [`PUB_OFF!`]: https://docs.rs/repr_offset/*/repr_offset/macro.PUB_OFF.html
 [`pub_off`]: https://docs.rs/repr_offset/*/repr_offset/macro.pub_off.html
 
+[`GetFieldOffset`]:
+https://docs.rs/repr_offset/*/repr_offset/get_field_offset/trait.GetFieldOffset.html
+
+[`ext`]:
+https://docs.rs/repr_offset/*/repr_offset/ext/index.html
+
 
 

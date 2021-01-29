@@ -1,6 +1,6 @@
 [package]
 name = "repr_offset"
-version = "0.1.2"
+version = "0.2.0"
 authors = ["rodrimati1992 <rodrimatt1985@gmail.com>"]
 edition = "2018"
 license = "Zlib"
@@ -46,13 +46,13 @@ docsrs = []
 test_nightly = ["testing","priv_raw_ref"]
 
 [dependencies]
-repr_offset_derive = {version = "0.1.1", path = "../repr_offset_derive", optional = true}
+repr_offset_derive = {version = "=0.2.0", path = "../repr_offset_derive", optional = true}
 
 [dependencies.tstr]
 version = "0.2"
 
 [dev-dependencies]
-repr_offset_derive = {version = "0.1", path = "../repr_offset_derive"}
+repr_offset_derive = {version = "=0.2.0", path = "../repr_offset_derive"}
 
 [package.metadata.docs.rs]
 features = ["docsrs", "for_examples", "derive"]

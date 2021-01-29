@@ -200,6 +200,7 @@
 //!
 #![no_std]
 #![cfg_attr(feature = "priv_raw_ref", feature(raw_ref_op))]
+#![cfg_attr(feature = "docsrs", feature(doc_cfg))]
 #![allow(clippy::empty_loop)]
 #![deny(clippy::missing_safety_doc)]
 #![deny(clippy::shadow_unrelated)]
@@ -231,10 +232,10 @@ pub mod privacy;
 /// types that are documented.
 ///
 /// You can only use items from this module when the "for_examples" feature is enabled.
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "for_examples")))]
 pub mod for_examples {
     #[doc(inline)]
     #[cfg(any(feature = "for_examples", doc))]
-    #[cfg_attr(feature = "docsrs", doc(cfg(for_examples)))]
     pub use crate::for_examples_inner::*;
 }
 

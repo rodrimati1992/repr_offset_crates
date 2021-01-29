@@ -267,5 +267,5 @@
 ///
 #[doc(inline)]
 #[cfg(feature = "derive")]
-#[cfg_attr(feature = "docsrs", doc(cfg(derive)))]
+#[cfg_attr(feature = "docsrs", doc(cfg(feature = "derive")))]
 pub use repr_offset_derive::ReprOffset;

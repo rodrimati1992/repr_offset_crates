@@ -3,8 +3,14 @@ use repr_offset::{
     get_field_offset::{FieldOffsetWithVis as FOWithVis, GetFieldOffset},
     privacy::IsPublic,
     tstr::TS,
-    FieldOffset, ReprOffset, PUB_OFF,
+    FieldOffset, PUB_OFF,
 };
+
+#[cfg(feature = "derive")]
+use repr_offset::ReprOffset;
+
+#[cfg(not(feature = "derive"))]
+use repr_offset_derive::ReprOffset;
 
 use std::{fmt::Debug, marker::PhantomData};
 

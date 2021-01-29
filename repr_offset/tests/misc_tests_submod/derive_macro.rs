@@ -124,10 +124,10 @@ mod repr_c_tuple {
         assert_eq!(Struct::OFF_TWO, MStruct::OFF_TWO);
         assert_eq!(Struct::OFF_3, MStruct::OFF_3);
 
-        assert_eq!(Struct::OFFSET_0, PUB_OFF!(Struct, 0));
-        assert_eq!(Struct::OFFSET_1, PUB_OFF!(Struct, 1));
-        assert_eq!(Struct::OFF_TWO, PUB_OFF!(Struct, 2));
-        assert_eq!(Struct::OFF_3, PUB_OFF!(Struct, 3));
+        assert_eq!(Struct::OFFSET_0, PUB_OFF!(Struct; 0));
+        assert_eq!(Struct::OFFSET_1, PUB_OFF!(Struct; 1));
+        assert_eq!(Struct::OFF_TWO, PUB_OFF!(Struct; 2));
+        assert_eq!(Struct::OFF_3, PUB_OFF!(Struct; 3));
     }
 }
 
@@ -270,10 +270,10 @@ mod changed_names {
         assert_eq!(Struct::OH_C, MStruct::OFFSET_C);
         assert_eq!(Struct::D_OFF, MStruct::OFFSET_D);
 
-        assert_eq!(Struct::OFF_A, PUB_OFF!(Struct, a));
-        assert_eq!(Struct::OFF_B, PUB_OFF!(Struct, b));
-        assert_eq!(Struct::OH_C, PUB_OFF!(Struct, c));
-        assert_eq!(Struct::D_OFF, PUB_OFF!(Struct, d));
+        assert_eq!(Struct::OFF_A, PUB_OFF!(Struct; a));
+        assert_eq!(Struct::OFF_B, PUB_OFF!(Struct; b));
+        assert_eq!(Struct::OH_C, PUB_OFF!(Struct; c));
+        assert_eq!(Struct::D_OFF, PUB_OFF!(Struct; d));
     }
 }
 
@@ -313,9 +313,9 @@ mod generic_params {
         assert_eq!(Struct::<'a, T>::OFFSET_Y, MStruct::<'a, T>::OFFSET_Y);
         assert_eq!(Struct::<'a, T>::OFFSET_Z, MStruct::<'a, T>::OFFSET_Z);
 
-        assert_eq!(Struct::<'a, T>::OFFSET_X, PUB_OFF!(Struct<'a, T>, x));
-        assert_eq!(Struct::<'a, T>::OFFSET_Y, PUB_OFF!(Struct<'a, T>, y));
-        assert_eq!(Struct::<'a, T>::OFFSET_Z, PUB_OFF!(Struct<'a, T>, z));
+        assert_eq!(Struct::<'a, T>::OFFSET_X, PUB_OFF!(Struct<'a, T>; x));
+        assert_eq!(Struct::<'a, T>::OFFSET_Y, PUB_OFF!(Struct<'a, T>; y));
+        assert_eq!(Struct::<'a, T>::OFFSET_Z, PUB_OFF!(Struct<'a, T>; z));
     }
 
     #[test]
@@ -375,9 +375,9 @@ mod with_bounds {
         assert_eq!(Struct::<T>::OFFSET_Y, MStruct::<T>::OFFSET_Y);
         assert_eq!(Struct::<T>::OFFSET_Z, MStruct::<T>::OFFSET_Z);
 
-        assert_eq!(Struct::<T>::OFFSET_X, PUB_OFF!(Struct<T>, x));
-        assert_eq!(Struct::<T>::OFFSET_Y, PUB_OFF!(Struct<T>, y));
-        assert_eq!(Struct::<T>::OFFSET_Z, PUB_OFF!(Struct<T>, z));
+        assert_eq!(Struct::<T>::OFFSET_X, PUB_OFF!(Struct<T>; x));
+        assert_eq!(Struct::<T>::OFFSET_Y, PUB_OFF!(Struct<T>; y));
+        assert_eq!(Struct::<T>::OFFSET_Z, PUB_OFF!(Struct<T>; z));
 
         let _: FieldOffset<_, u8, _> = Struct::<T>::OFFSET_X;
         let _: FieldOffset<_, u64, _> = Struct::<T>::OFFSET_Y;
@@ -469,8 +469,8 @@ mod no_getfieldoffset_impls {
 
     #[test]
     fn no_getfieldoffset_test() {
-        let _: FieldOffset<Struct, ZstX, Aligned> = PUB_OFF!(Struct, x);
-        let _: FieldOffset<Struct, ZstY, Aligned> = PUB_OFF!(Struct, y);
-        let _: FieldOffset<Struct, ZstZ, Aligned> = PUB_OFF!(Struct, z);
+        let _: FieldOffset<Struct, ZstX, Aligned> = PUB_OFF!(Struct; x);
+        let _: FieldOffset<Struct, ZstY, Aligned> = PUB_OFF!(Struct; y);
+        let _: FieldOffset<Struct, ZstZ, Aligned> = PUB_OFF!(Struct; z);
     }
 }

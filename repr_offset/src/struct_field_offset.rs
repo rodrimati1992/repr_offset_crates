@@ -168,7 +168,7 @@ use core::{
 ///
 /// // The this argument is required to call FieldOffset methods,
 /// // infering the S type parameter of FieldOffset from `this`.
-/// let _ = off!(this, y.years);
+/// let _ = off!(this; y.years);
 ///
 /// assert_eq!(off_name.get_copy(&this), "John" );
 /// assert_eq!(off_years.get_copy(&this), 13 );

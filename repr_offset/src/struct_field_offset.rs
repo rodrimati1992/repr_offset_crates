@@ -2,11 +2,20 @@
 // which as far as I am aware are all smaller than isize::MAX
 #![allow(clippy::ptr_offset_with_cast)]
 
+#[macro_use]
+mod impl_fieldoffset_methods;
+
+mod repr_offset_ext_impls;
+
+////////////////////////////////////////////////////////////////////////////////
+
 use crate::{
+    alignment::{Aligned, Alignment, CombineAlignment, CombineAlignmentOut, Unaligned},
     offset_calc::GetNextFieldOffset,
-    utils::{Mem, UnalignedMaybeUninit},
-    Aligned, Alignment, CombinePacking, CombinePackingOut, Unaligned,
+    utils::Mem,
 };
+
+use crate::get_field_offset::FieldOffsetWithVis;
 
 use core::{
     fmt::{self, Debug},
@@ -117,13 +126,19 @@ use core::{
 /// <span id="nested-field-in-packed"></span>
 /// ### Accessing Nested Fields
 ///
-/// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct.
+/// This example demonstrates how to access nested fields in a `#[repr(C, packed)]` struct,
+/// using the [`GetFieldOffset`] trait implemented by the [`ReprOffset`] derive,
+/// through the [`off`](./macro.off.html) macro.
 ///
 /// ```rust
 /// # #![deny(safe_packed_borrows)]
 #[cfg_attr(feature = "derive", doc = "use repr_offset::ReprOffset;")]
 #[cfg_attr(not(feature = "derive"), doc = "use repr_offset_derive::ReprOffset;")]
-/// use repr_offset::{Aligned, FieldOffset, Unaligned};
+/// use repr_offset::{
+///     alignment::{Aligned, Unaligned},
+///     off,
+///     FieldOffset,
+/// };
 ///
 /// #[repr(C, packed)]
 /// #[derive(ReprOffset)]
@@ -139,29 +154,27 @@ use core::{
 ///     years: usize,
 /// }
 ///
-/// const OFFY: FieldOffset<Pack, NestedC, Unaligned> = Pack::OFFSET_Y;
-///
-/// let _: FieldOffset<NestedC, &'static str, Aligned> = NestedC::OFFSET_NAME;
-/// let _: FieldOffset<NestedC, usize, Aligned> = NestedC::OFFSET_YEARS;
-///
-/// // As you can see `FieldOffset::add` combines two offsets,
-/// // allowing you to access a nested field with a single `FieldOffset`.
-/// //
-/// // These `FieldOffset`s have an `Unaligned` type argument because
-/// // OFFY is a `FieldOffset<_, _, Unaligned>`.
-/// const OFF_NAME: FieldOffset<Pack, &'static str, Unaligned> = OFFY.add(NestedC::OFFSET_NAME);
-/// const OFF_YEARS: FieldOffset<Pack, usize, Unaligned> = OFFY.add(NestedC::OFFSET_YEARS);
-///
 /// let this = Pack{
 ///     x: 0,
 ///     y: NestedC{ name: "John", years: 13 },
 /// };
 ///
-/// assert_eq!(OFF_NAME.get_copy(&this), "John" );
-/// assert_eq!(OFF_YEARS.get_copy(&this), 13 );
+/// let off_y: FieldOffset<Pack, NestedC, Unaligned> = off!(y);
+///
+/// let off_name: FieldOffset<Pack, &'static str, Unaligned> = off!(y.name);
+///
+/// // You can also get the FieldOffset for a nested field like this.
+/// let off_years: FieldOffset<Pack, usize, Unaligned> = off_y.add(off!(years));
+///
+/// // The this argument is required to call FieldOffset methods,
+/// // infering the S type parameter of FieldOffset from `this`.
+/// let _ = off!(this; y.years);
+///
+/// assert_eq!(off_name.get_copy(&this), "John" );
+/// assert_eq!(off_years.get_copy(&this), 13 );
 ///
 /// unsafe{
-///     let nested_ptr: *const NestedC = OFFY.get_ptr(&this);
+///     let nested_ptr: *const NestedC = off_y.get_ptr(&this);
 ///
 ///     // This code is undefined behavior,
 ///     // because `NestedC`'s offsets require the passed in pointer to be aligned.
@@ -177,20 +190,56 @@ use core::{
 /// }
 /// ```
 ///
-/// [`Aligned`]: ./struct.Aligned.html
-/// [`Unaligned`]: ./struct.Unaligned.html
+/// [`Aligned`]: ./alignment/struct.Aligned.html
+/// [`Unaligned`]: ./alignment/struct.Unaligned.html
 ///
 /// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
+/// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 ///
 #[repr(transparent)]
 pub struct FieldOffset<S, F, A> {
     offset: usize,
-    _marker: PhantomData<DummyType<(S, F, A)>>,
+    #[doc(hidden)]
+    pub tys: FOGhosts<S, F, A>,
 }
 
-// Workaround for `PhantomData<fn()->T>` not being constructible in const contexts
-struct DummyType<T>(fn() -> T);
+//////////////////////
+
+#[doc(hidden)]
+pub struct FOGhosts<S, F, A> {
+    pub struct_: PhantomData<fn() -> S>,
+    pub field: PhantomData<fn() -> F>,
+    pub alignment: PhantomData<fn() -> A>,
+}
+
+impl<S, F, A> Copy for FOGhosts<S, F, A> {}
+
+impl<S, F, A> Clone for FOGhosts<S, F, A> {
+    #[inline(always)]
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<S, F, A> FOGhosts<S, F, A> {
+    const NEW: Self = Self {
+        struct_: PhantomData,
+        field: PhantomData,
+        alignment: PhantomData,
+    };
+}
+
+//////////////////////
+
+#[doc(hidden)]
+#[repr(transparent)]
+pub struct FOAssertStruct<S, F, A> {
+    pub offset: FieldOffset<S, F, A>,
+    pub struct_: PhantomData<fn() -> S>,
+}
+
+//////////////////////
 
 impl_cmp_traits_for_offset! {
     impl[S, F, A] FieldOffset<S, F, A>
@@ -211,22 +260,6 @@ impl<S, F, A> Clone for FieldOffset<S, F, A> {
     fn clone(&self) -> Self {
         *self
     }
-}
-
-// Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `raw_get`
-macro_rules! get_ptr_method {
-    ($self:ident, $base:expr, $F:ty) => {
-        ($base as *const _ as *const u8).offset($self.offset as isize) as *const $F
-    };
-}
-
-// Defined this macro to reduce the amount of instructions in debug builds
-// caused by delegating to `raw_get_mut`
-macro_rules! get_mut_ptr_method {
-    ($self:ident, $base:expr, $F:ty) => {
-        ($base as *mut _ as *mut u8).offset($self.offset as isize) as *mut $F
-    };
 }
 
 impl<S, F, A> FieldOffset<S, F, A> {
@@ -278,13 +311,13 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// };
     ///
     /// ```
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn new(offset: usize) -> Self {
         Self {
             offset,
-            _marker: PhantomData,
+            tys: FOGhosts::NEW,
         }
     }
 
@@ -293,7 +326,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     const fn priv_new(offset: usize) -> Self {
         Self {
             offset,
-            _marker: PhantomData,
+            tys: FOGhosts::NEW,
         }
     }
 
@@ -342,8 +375,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// ```
     ///
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     pub const unsafe fn next_field_offset<Next, NextA>(self) -> FieldOffset<S, Next, NextA> {
         let offset = GetNextFieldOffset {
             previous_offset: self.offset,
@@ -355,7 +388,17 @@ impl<S, F, A> FieldOffset<S, F, A> {
 
         FieldOffset {
             offset,
-            _marker: PhantomData,
+            tys: FOGhosts::NEW,
+        }
+    }
+}
+
+impl FieldOffset<(), (), Aligned> {
+    /// Constructs a `FieldOffset` where `T` is the struct and the field type.
+    pub const fn identity<T>() -> FieldOffset<T, T, Aligned> {
+        FieldOffset {
+            offset: 0,
+            tys: FOGhosts::NEW,
         }
     }
 }
@@ -474,10 +517,10 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
 ///
 impl<S, F, A, F2, A2> Add<FieldOffset<F, F2, A2>> for FieldOffset<S, F, A>
 where
-    A: CombinePacking<A2>,
+    A: CombineAlignment<A2>,
     A2: Alignment,
 {
-    type Output = FieldOffset<S, F2, CombinePackingOut<A, A2>>;
+    type Output = FieldOffset<S, F2, CombineAlignmentOut<A, A2>>;
 
     #[inline(always)]
     fn add(self, other: FieldOffset<F, F2, A2>) -> Self::Output {
@@ -515,7 +558,35 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const fn offset(self) -> usize {
         self.offset
     }
+}
 
+impl<S, F, A> FieldOffset<S, F, A> {
+    /// Converts this FieldOffset into a [`FieldOffsetWithVis`].
+    ///
+    /// # Safety
+    ///
+    /// The `V` type parameter must be:
+    /// - `[`IsPublic`]`: When the field is `pub`.
+    ///
+    /// - [`IsPrivate`]: When the field has the default (private) visibility,
+    /// or has a visibility smaller or equal to `pub(crate)`.
+    ///
+    /// The `FN` type parameter must be the name of the field using the
+    /// `repr_offset::tstr::TS` macro,
+    /// eg: `TS!(foo)` for the `foo` field.
+    ///
+    /// [`IsPublic`]: ./privacy/struct.IsPublic.html
+    /// [`IsPrivate`]: ./privacy/struct.IsPrivate.html
+    ///
+    /// [`FieldOffsetWithVis`] ./get_field_offset/struct.FieldOffsetWithVis.html
+    ///
+    #[inline(always)]
+    pub const unsafe fn with_vis<V, FN>(self) -> FieldOffsetWithVis<S, V, FN, F, A> {
+        FieldOffsetWithVis::from_fieldoffset(self)
+    }
+}
+
+impl<S, F, A> FieldOffset<S, F, A> {
     /// Changes the `S` type parameter, most useful for `#[repr(transparent)]` wrappers.
     ///
     /// # Safety
@@ -561,8 +632,8 @@ impl<S, F, A> FieldOffset<S, F, A> {
     ///
     /// ```
     ///
-    /// [`Aligned`]: ./struct.Aligned.html
-    /// [`Unaligned`]: ./struct.Unaligned.html
+    /// [`Aligned`]: ./alignment/struct.Aligned.html
+    /// [`Unaligned`]: ./alignment/struct.Unaligned.html
     #[inline(always)]
     pub const unsafe fn cast_struct<S2>(self) -> FieldOffset<S2, F, A> {
         FieldOffset::new(self.offset)
@@ -646,7 +717,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     pub const fn to_unaligned(self) -> FieldOffset<S, F, Unaligned> {
         FieldOffset {
             offset: self.offset,
-            _marker: PhantomData,
+            tys: FOGhosts::NEW,
         }
     }
 
@@ -701,7 +772,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub fn get(self, base: &S) -> &F {
-        unsafe { &*get_ptr_method!(self, base, F) }
+        unsafe { impl_fo!(fn get<S, F, Aligned>(self, base)) }
     }
 
     /// Gets a mutable reference to the field that this is an offset for.
@@ -720,7 +791,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub fn get_mut(self, base: &mut S) -> &mut F {
-        unsafe { &mut *get_mut_ptr_method!(self, base, F) }
+        unsafe { impl_fo!(fn get_mut<S, F, Aligned>(self, base)) }
     }
 
     /// Copies the aligned field that this is an offset for.
@@ -752,7 +823,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     where
         F: Copy,
     {
-        unsafe { *get_ptr_method!(self, base, F) }
+        unsafe { impl_fo!(fn get_copy<S, F, Aligned>(self, base)) }
     }
 }
 
@@ -780,7 +851,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// ```
     #[inline(always)]
     pub fn get_ptr(self, base: &S) -> *const F {
-        unsafe { get_ptr_method!(self, base, F) }
+        unsafe { impl_fo!(fn get_ptr<S, F, A>(self, base)) }
     }
 
     /// Gets a mutable raw pointer to a field from a mutable reference to the `S` struct.
@@ -814,7 +885,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// ```
     #[inline(always)]
     pub fn get_mut_ptr(self, base: &mut S) -> *mut F {
-        unsafe { get_mut_ptr_method!(self, base, F) }
+        unsafe { impl_fo!(fn get_mut_ptr<S, F, A>(self, base)) }
     }
 
     /// Gets a raw pointer to a field from a pointer to the `S` struct.
@@ -849,7 +920,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// ```
     #[inline(always)]
     pub unsafe fn raw_get(self, base: *const S) -> *const F {
-        get_ptr_method!(self, base, F)
+        impl_fo!(fn raw_get<S, F, A>(self, base))
     }
 
     /// Gets a mutable raw pointer to a field from a pointer to the `S` struct.
@@ -893,7 +964,7 @@ impl<S, F, A> FieldOffset<S, F, A> {
     /// ```
     #[inline(always)]
     pub unsafe fn raw_get_mut(self, base: *mut S) -> *mut F {
-        get_mut_ptr_method!(self, base, F)
+        impl_fo!(fn raw_get_mut<S, F, A>(self, base))
     }
 
     /// Gets a raw pointer to a field from a pointer to the `S` struct.
@@ -1021,7 +1092,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     where
         F: Copy,
     {
-        *get_ptr_method!(self, base, F)
+        impl_fo!(fn read_copy<S, F, Aligned>(self, base))
     }
 
     /// Reads the value from the field in `source` without moving it.
@@ -1058,7 +1129,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
-        get_ptr_method!(self, source, F).read()
+        impl_fo!(fn read<S, F, Aligned>(self, source))
     }
 
     /// Writes `value` ìnto the field in `destination` without dropping the old value of the field.
@@ -1093,7 +1164,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn write(self, destination: *mut S, value: F) {
-        get_mut_ptr_method!(self, destination, F).write(value)
+        impl_fo!(fn write<S, F, Aligned>(self, destination, value))
     }
 
     /// Copies the field in `source` into `destination`.
@@ -1130,11 +1201,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn copy(self, source: *const S, destination: *mut S) {
-        core::ptr::copy(
-            get_ptr_method!(self, source, F),
-            get_mut_ptr_method!(self, destination, F),
-            1,
-        );
+        impl_fo!(fn copy<S, F, Aligned>(self, source, destination))
     }
 
     /// Copies the field in `source` into `destination`,
@@ -1173,11 +1240,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
-        core::ptr::copy_nonoverlapping(
-            get_ptr_method!(self, source, F),
-            get_mut_ptr_method!(self, destination, F),
-            1,
-        );
+        impl_fo!(fn copy_nonoverlapping<S, F, Aligned>(self, source, destination))
     }
 
     /// Replaces the value of a field in `destination` with `value`,
@@ -1211,7 +1274,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn replace(self, destination: *mut S, value: F) -> F {
-        core::ptr::replace(get_mut_ptr_method!(self, destination, F), value)
+        impl_fo!(fn replace<S, F, Aligned>(self, destination, value))
     }
 
     /// Replaces the value of a field in `destination` with `value`,
@@ -1234,7 +1297,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub fn replace_mut(self, destination: &mut S, value: F) -> F {
-        unsafe { core::mem::replace(&mut *get_mut_ptr_method!(self, destination, F), value) }
+        unsafe { impl_fo!(fn replace_mut<S, F, Aligned>(self, destination, value)) }
     }
 
     /// Swaps the values of a field between the `left` and `right` pointers.
@@ -1271,10 +1334,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn swap(self, left: *mut S, right: *mut S) {
-        core::ptr::swap::<F>(
-            get_mut_ptr_method!(self, left, F),
-            get_mut_ptr_method!(self, right, F),
-        )
+        impl_fo!(fn swap<S, F, Aligned>(self, left, right))
     }
 
     /// Swaps the values of a field between the `left` and `right` non-overlapping pointers.
@@ -1313,11 +1373,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     #[inline(always)]
     pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
-        core::ptr::swap_nonoverlapping::<F>(
-            get_mut_ptr_method!(self, left, F),
-            get_mut_ptr_method!(self, right, F),
-            1,
-        )
+        impl_fo!(fn swap_nonoverlapping<S, F, Aligned>(self, left, right))
     }
 
     /// Swaps the values of a field between `left` and `right`.
@@ -1344,12 +1400,7 @@ impl<S, F> FieldOffset<S, F, Aligned> {
     ///
     #[inline(always)]
     pub fn swap_mut(self, left: &mut S, right: &mut S) {
-        unsafe {
-            core::mem::swap(
-                &mut *get_mut_ptr_method!(self, left, F),
-                &mut *get_mut_ptr_method!(self, right, F),
-            )
-        }
+        unsafe { impl_fo!(fn swap_mut<S, F, Aligned>(self, left, right)) }
     }
 }
 
@@ -1384,7 +1435,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     where
         F: Copy,
     {
-        unsafe { get_ptr_method!(self, base, F).read_unaligned() }
+        unsafe { impl_fo!(fn get_copy<S, F, Unaligned>(self, base)) }
     }
 
     /// Copies the unaligned field that this is an offset for.
@@ -1428,7 +1479,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     where
         F: Copy,
     {
-        get_ptr_method!(self, base, F).read_unaligned()
+        impl_fo!(fn read_copy<S, F, Unaligned>(self, base))
     }
 
     /// Reads the value from the field in `source` without moving it.
@@ -1465,7 +1516,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn read(self, source: *const S) -> F {
-        get_ptr_method!(self, source, F).read_unaligned()
+        impl_fo!(fn read<S, F, Unaligned>(self, source))
     }
 
     /// Writes `value` ìnto the field in `source` without dropping the old value of the field.
@@ -1499,7 +1550,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn write(self, source: *mut S, value: F) {
-        get_mut_ptr_method!(self, source, F).write_unaligned(value)
+        impl_fo!(fn write<S, F, Unaligned>(self, source, value))
     }
 
     /// Copies the field in `source` into `destination`.
@@ -1539,11 +1590,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn copy(self, source: *const S, destination: *mut S) {
-        core::ptr::copy(
-            get_ptr_method!(self, source, F) as *const u8,
-            get_mut_ptr_method!(self, destination, F) as *mut u8,
-            Mem::<F>::SIZE,
-        );
+        impl_fo!(fn copy<S, F, Unaligned>(self, source, destination))
     }
 
     /// Copies the field in `source` into `destination`,
@@ -1584,21 +1631,8 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn copy_nonoverlapping(self, source: *const S, destination: *mut S) {
-        core::ptr::copy_nonoverlapping(
-            get_ptr_method!(self, source, F) as *const u8,
-            get_mut_ptr_method!(self, destination, F) as *mut u8,
-            Mem::<F>::SIZE,
-        );
+        impl_fo!(fn copy_nonoverlapping<S, F, Unaligned>(self, source, destination))
     }
-}
-
-macro_rules! replace_unaligned {
-    ($self:ident, $base:expr, $value:expr, $F:ty) => {{
-        let ptr = get_mut_ptr_method!($self, $base, $F);
-        let ret = ptr.read_unaligned();
-        ptr.write_unaligned($value);
-        ret
-    }};
 }
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
@@ -1635,7 +1669,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn replace(self, dest: *mut S, value: F) -> F {
-        replace_unaligned!(self, dest, value, F)
+        impl_fo!(fn replace<S, F, Unaligned>(self, dest, value))
     }
 
     /// Replaces the value of a field in `dest` with `value`,
@@ -1659,22 +1693,8 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     /// ```
     pub fn replace_mut(self, dest: &mut S, value: F) -> F {
-        unsafe { replace_unaligned!(self, dest, value, F) }
+        unsafe { impl_fo!(fn replace_mut<S, F, Unaligned>(self, dest, value)) }
     }
-}
-
-macro_rules! unaligned_swap {
-    ($self:ident, $left:ident, $right:ident, $left_to_right:expr, $F:ty) => {{
-        // This function can definitely be optimized.
-        let mut tmp = UnalignedMaybeUninit::<$F>::uninit();
-        let tmp = tmp.as_mut_ptr() as *mut u8;
-
-        let $left = get_mut_ptr_method!($self, $left, $F) as *mut u8;
-        let $right = get_mut_ptr_method!($self, $right, $F) as *mut u8;
-        core::ptr::copy_nonoverlapping($left, tmp, Mem::<$F>::SIZE);
-        $left_to_right($right, $left, Mem::<$F>::SIZE);
-        core::ptr::copy_nonoverlapping(tmp, $right, Mem::<$F>::SIZE);
-    }};
 }
 
 impl<S, F> FieldOffset<S, F, Unaligned> {
@@ -1714,7 +1734,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     /// ```
     #[inline(always)]
     pub unsafe fn swap(self, left: *mut S, right: *mut S) {
-        unaligned_swap!(self, left, right, core::ptr::copy, F)
+        impl_fo!(fn swap<S, F, Unaligned>(self, left, right))
     }
 
     /// Swaps the values of a field between the non-overlapping `left` and `right` pointers.
@@ -1755,7 +1775,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     #[inline(always)]
     pub unsafe fn swap_nonoverlapping(self, left: *mut S, right: *mut S) {
-        unaligned_swap!(self, left, right, core::ptr::copy_nonoverlapping, F)
+        impl_fo!(fn swap_nonoverlapping<S, F, Unaligned>(self, left, right))
     }
 
     /// Swaps the values of a field between `left` and `right`.
@@ -1783,14 +1803,7 @@ impl<S, F> FieldOffset<S, F, Unaligned> {
     ///
     #[inline(always)]
     pub fn swap_mut(self, left: &mut S, right: &mut S) {
-        // This function could probably be optimized.
-        unsafe {
-            let left = get_mut_ptr_method!(self, left, F);
-            let right = get_mut_ptr_method!(self, right, F);
-            let tmp = left.read_unaligned();
-            left.write_unaligned(right.read_unaligned());
-            right.write_unaligned(tmp);
-        }
+        unsafe { impl_fo!(fn swap_mut<S, F, Unaligned>(self, left, right)) }
     }
 }
 

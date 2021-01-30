@@ -7,6 +7,7 @@ macro_rules! declare_example_struct {
         $(#[$meta:meta])*
         struct $name:ident;
         alignment =  $alignment:ty,
+        $(impl_GetFieldOffset = $impl_gdo:ident,)?
     ) => {
         $(#[$meta])*
         #[derive(Default)]
@@ -39,15 +40,16 @@ macro_rules! declare_example_struct {
 
         unsafe_struct_field_offsets!{
             alignment =  $alignment,
+            $(impl_GetFieldOffset = $impl_gdo,)?
             impl[A,B,C,D] $name<A,B,C,D>{
                 /// The offset of the `a` field
-                pub const OFFSET_A: A;
+                pub const OFFSET_A, a: A;
                 /// The offset of the `b` field
-                pub const OFFSET_B: B;
+                pub const OFFSET_B, b: B;
                 /// The offset of the `c` field
-                pub const OFFSET_C: C;
+                pub const OFFSET_C, c: C;
                 /// The offset of the `d` field
-                pub const OFFSET_D: D;
+                pub const OFFSET_D, d: D;
             }
         }
     };
@@ -58,6 +60,16 @@ declare_example_struct! {
     #[repr(C)]
     struct ReprC;
     alignment = Aligned,
+}
+
+declare_example_struct! {
+    /// An example `#[repr(C)]` type which doesn't implement [`GetFieldOffset`]
+    ///
+    /// [`GetFieldOffset`]: ../get_field_offset/trait.GetFieldOffset.html
+    #[repr(C)]
+    struct ReprCNoGFO;
+    alignment = Aligned,
+    impl_GetFieldOffset = false,
 }
 
 declare_example_struct! {

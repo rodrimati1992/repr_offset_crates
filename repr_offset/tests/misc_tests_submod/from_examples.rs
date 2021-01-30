@@ -46,9 +46,9 @@ fn replace_struct_field() {
         alignment =  Unaligned,
 
         impl[] Bar {
-            pub const OFFSET_MUGS: u32;
-            pub const OFFSET_BOTTLES: u16;
-            pub const OFFSET_TABLE: String;
+            pub const OFFSET_MUGS, mugs: u32;
+            pub const OFFSET_BOTTLES, bottles: u16;
+            pub const OFFSET_TABLE, table: String;
         }
     }
 }

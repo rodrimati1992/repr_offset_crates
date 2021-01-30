@@ -15,9 +15,9 @@ unsafe_struct_field_offsets! {
     alignment =  Aligned,
 
     impl[] Foo{
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
-        pub const OFFSET_BAZ: u16;
+        pub const OFFSET_FOO, foo: u8;
+        pub const OFFSET_BAR, bar: u64;
+        pub const OFFSET_BAZ, baz: u16;
     }
 }
 
@@ -27,9 +27,9 @@ unsafe_struct_field_offsets! {
     usize_offsets = false,
 
     impl[] Consts {
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
-        pub const OFFSET_BAZ: u16;
+        pub const OFFSET_FOO, foo: u8;
+        pub const OFFSET_BAR, bar: u64;
+        pub const OFFSET_BAZ, baz: u16;
     }
 }
 
@@ -39,9 +39,9 @@ unsafe_struct_field_offsets! {
     usize_offsets = true,
 
     impl[] UsizeConsts {
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
-        pub const OFFSET_BAZ: u16;
+        pub const OFFSET_FOO, foo: u8;
+        pub const OFFSET_BAR, bar: u64;
+        pub const OFFSET_BAZ, baz: u16;
     }
 }
 
@@ -51,9 +51,9 @@ unsafe_struct_field_offsets! {
 
     #[cfg(FALSE)]
     impl[] AttributeConsts {
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
-        pub const OFFSET_BAZ: u16;
+        pub const OFFSET_FOO, foo: u8;
+        pub const OFFSET_BAR, bar: u64;
+        pub const OFFSET_BAZ, baz: u16;
     }
 }
 
@@ -62,11 +62,11 @@ unsafe_struct_field_offsets! {
     alignment =  Aligned,
 
     impl[] AttributeConsts {
-        pub const OFFSET_FOO: u8;
-        pub const OFFSET_BAR: u64;
+        pub const OFFSET_FOO, foo: u8;
+        pub const OFFSET_BAR, bar: u64;
 
         #[cfg(FALSE)]
-        pub const OFFSET_BAZ: u16;
+        pub const OFFSET_BAZ, baz: u16;
     }
 }
 impl AttributeConsts {

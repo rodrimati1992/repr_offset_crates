@@ -192,7 +192,7 @@
 //! [`PUB_OFF!`]: ./macro.PUB_OFF.html
 //! [`pub_off`]: ./macro.pub_off.html
 //!
-//! [`ReprOffset`]: ./docs/repr_offset_macro/index.html
+//! [`ReprOffset`]: ./derive.ReprOffset.html
 //! [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 //! [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 //! [`FieldOffset`]: ./struct.FieldOffset.html

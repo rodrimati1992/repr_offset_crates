@@ -193,7 +193,7 @@ use core::{
 /// [`Aligned`]: ./alignment/struct.Aligned.html
 /// [`Unaligned`]: ./alignment/struct.Unaligned.html
 ///
-/// [`ReprOffset`]: ./docs/repr_offset_macro/index.html
+/// [`ReprOffset`]: ./derive.ReprOffset.html
 /// [`unsafe_struct_field_offsets`]: ./macro.unsafe_struct_field_offsets.html
 /// [`GetFieldOffset`]: ./get_field_offset/trait.GetFieldOffset.html
 ///

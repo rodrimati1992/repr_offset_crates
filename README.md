@@ -68,7 +68,7 @@ This crate support Rust back to 1.41.0.
 Licensed under the Zlib license
 
 [`ReprOffset`]:
-https://docs.rs/repr_offset/*/repr_offset/docs/repr_offset_macro/index.html
+https://docs.rs/repr_offset/*/repr_offset/derive.ReprOffset.html
 
 [`unsafe_struct_field_offsets`]:
 https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_struct_field_offsets.html

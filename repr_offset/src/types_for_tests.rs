@@ -84,10 +84,10 @@ macro_rules! declare_struct {
             impl[A,B,C,D] $name<(),(A,B,C,D),(),()>
             where [ A: Default, ]
             {
-                pub const OFFSET_A, a: A;
-                pub const OFFSET_B, b: B;
-                pub const OFFSET_C, c: C;
-                pub const OFFSET_D, d: D;
+                pub const OFFSET_A: A;
+                pub const OFFSET_B: B;
+                pub const OFFSET_C: C;
+                pub const OFFSET_D: D;
             }
         }
     };

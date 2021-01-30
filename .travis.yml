@@ -1,0 +1,57 @@
+language: rust
+
+os: 
+  - linux
+  - osx
+  - windows
+
+matrix:
+  include:
+    - rust: 1.38.0
+    - rust: beta
+    - rust: nightly  
+      script:
+        - cargo update -Z minimal-versions
+        - cd "${TRAVIS_BUILD_DIR}/repr_offset_derive/"
+        - cargo build --tests --features testing
+        - cd "${TRAVIS_BUILD_DIR}/repr_offset/"
+        - cargo build --tests --features "testing priv_expensive_test derive"
+
+        - cd "${TRAVIS_BUILD_DIR}/repr_offset/"
+
+        - MIRI_NIGHTLY=nightly-$(curl -s https://rust-lang.github.io/rustup-components-history/x86_64-unknown-linux-gnu/miri)
+        - echo "Installing latest nightly with Miri"
+        - echo "$MIRI_NIGHTLY"
+        - rustup set profile minimal
+        - rustup default "$MIRI_NIGHTLY"
+        - rustup override set "$MIRI_NIGHTLY"
+        - rustup component add miri
+        - cargo miri setup
+
+        - cargo test --no-default-features --features "test_nightly priv_expensive_test"
+        - cargo test --no-default-features --features "test_nightly priv_expensive_test derive"
+        - cargo test --no-default-features --features "testing priv_expensive_test derive"
+        
+        - cargo clean 
+
+        - cargo miri test --no-default-features --features "testing priv_expensive_test derive"
+        - cargo miri test --no-default-features --features "test_nightly priv_expensive_test derive"
+    - rust: 1.34.0
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/repr_offset/"
+        - cargo test --doc --features testing
+        - cargo test --doc --no-default-features --features "testing derive"
+    - rust: 1.36.0
+      script:
+        - cd "${TRAVIS_BUILD_DIR}/repr_offset/"
+        - cargo test --doc --features testing
+        - cargo test --doc --no-default-features --features "testing derive"    
+
+script:
+  - cargo update
+  - cd "${TRAVIS_BUILD_DIR}/repr_offset_derive/"
+  - cargo test --features testing
+
+  - cd "${TRAVIS_BUILD_DIR}/repr_offset/"
+  - cargo test --features "testing priv_expensive_test"
+  - cargo test --no-default-features --features "testing priv_expensive_test derive"

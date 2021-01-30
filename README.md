@@ -4,7 +4,7 @@
 
 
 
-`repr_offset` allows computing and safely using field offsets from types with a defined layout.
+`repr_offset` allows computing and safely using field offsets from types with a stable layout.
 
 Currently only `#[repr(C)]`/`#[repr(C,packed)]`/`#[repr(C,align)]` structs are supported.
 
@@ -13,26 +13,20 @@ Currently only `#[repr(C)]`/`#[repr(C,packed)]`/`#[repr(C,align)]` structs are s
 These are some of the features this library provides:
 
 - The [`ReprOffset`] derive macro, which outputs associated constants with the
-offsets of fields, and implements the [`GetFieldOffset`] trait for each field.<br>
+offsets of fields.<br>
 
-- The [`FieldOffset`] type (how offsets are represented),
+- Using the [`FieldOffset`] type (how offsets are represented),
 with methods for operating on a field through a pointer to the struct,
 including getting a reference(or pointer) to the field.
 
-- The [`unsafe_struct_field_offsets`] macro as an alternative to the
+- Use the [`unsafe_struct_field_offsets`] macro as an alternative to the
 [`ReprOffset`] derive macro, most useful when the "derive" feature is disabled.
 
-- The [`GetFieldOffset`] trait, for getting the [`FieldOffset`] for a field,
-and the [`OFF!`], [`off`], [`PUB_OFF!`], and [`pub_off`] macros for
-getting the [`FieldOffset`] for a field with a convenient syntax.
-
-- The extension traits from the [`ext`] module,
-which define methods for operating on a field, given a [`FieldOffset`].
 
 # Examples 
 
 For **examples** you can look at
-[the examples section of the documentation for the root module of the `repr_offset` crate
+[the examples section of the documentation for the root module of the repr_offset crate
 ](https://docs.rs/repr_offset/*/repr_offset/index.html#root-mod-examples)
 
 # Future plans
@@ -41,19 +35,14 @@ None for now.
 
 # Cargo features
 
-These are the cargo features in `repr_offset`:
+These are the cargo features in repr_offset:
 
-- `derive` (disabled by default): 
+- `derive` (enabled by default): 
 Re-exports the `ReprOffset` derive macro from the `repr_offset_derive` crate.
 
-- `"for_examples"` (disabled by default): 
-Enables the `for_examples` module, with types used in documentation examples.
 
-Adding the "derive" feature to the Cargo.toml file:
-```toml
-repr_offset = { version = "0.2", features = ["derive"] }
-```
-
+You can disable default features by using `default_features = false`,
+eg:`repr_offset = { version = "0.1", default_features = false }`.
 
 # no-std support
 
@@ -61,7 +50,12 @@ This library is unconditionally `#![no_std]`,and that is unlikely to change in t
 
 # Minimum Rust version
 
-This crate support Rust back to 1.41.0.
+This crate support Rust back to 1.34.0 with only documentation tests,
+and back to 1.38.0 with all the tests.
+
+For some reason, compiling all the tests in Rust versions before 1.38.0 causes the
+compiler to use an unbounded amount of memory, or overflow the stack.
+(depending on the compiler version).
 
 # License
 
@@ -76,16 +70,7 @@ https://docs.rs/repr_offset/*/repr_offset/macro.unsafe_struct_field_offsets.html
 [`FieldOffset`]: 
 https://docs.rs/repr_offset/*/repr_offset/struct.FieldOffset.html
 
-[`OFF!`]: https://docs.rs/repr_offset/*/repr_offset/macro.OFF.html
-[`off`]: https://docs.rs/repr_offset/*/repr_offset/macro.off.html
-[`PUB_OFF!`]: https://docs.rs/repr_offset/*/repr_offset/macro.PUB_OFF.html
-[`pub_off`]: https://docs.rs/repr_offset/*/repr_offset/macro.pub_off.html
 
-[`GetFieldOffset`]:
-https://docs.rs/repr_offset/*/repr_offset/get_field_offset/trait.GetFieldOffset.html
-
-[`ext`]:
-https://docs.rs/repr_offset/*/repr_offset/ext/index.html
 
 
 

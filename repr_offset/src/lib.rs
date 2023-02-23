@@ -97,7 +97,7 @@
 //!
 //! fn main(){
 //!     unsafe {
-//!         let mut foo = MaybeUninit::uninit();
+//!         let mut foo = MaybeUninit::<Foo>::uninit();
 //!         initialize_foo(foo.as_mut_ptr());
 //!         assert_eq!(
 //!             foo.assume_init(),
@@ -121,10 +121,11 @@
 //!     Foo::OFFSET_Y.write(this, 21);
 //!
 //!     // How it's done with the extension traits from the ext module,
-//!     // and the `off` macro that get the offsets of fields using the GetFieldOffset trait.
-//!     this.f_write(off!(name), "foo".into());
-//!     this.f_write(off!(x), 13);
-//!     this.f_write(off!(y), 21);
+//!     // the `off` macro, and the `GetFieldOffset` trait:
+//!     //
+//!     //     this.f_write(off!(name), "foo".into());
+//!     //     this.f_write(off!(x), 13);
+//!     //     this.f_write(off!(y), 21);
 //! }
 //!
 //! #[repr(C)]

@@ -111,7 +111,7 @@ macro_rules! impl_fo {
                     get_ptr_method!($self, $source, $S, $F) as *const u8,
                     get_mut_ptr_method!($self, $dst, $S, $F) as *mut u8,
                     crate::utils::Mem::<F>::SIZE,
-                );
+                )
             }
         }
     };
@@ -128,7 +128,7 @@ macro_rules! impl_fo {
                     get_ptr_method!($self, $source, $S, $F) as *const u8,
                     get_mut_ptr_method!($self, $dst, $S, $F) as *mut u8,
                     crate::utils::Mem::<F>::SIZE,
-                );
+                )
             }
         }
     };

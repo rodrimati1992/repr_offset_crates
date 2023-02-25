@@ -1,6 +1,15 @@
 This is the changelog,summarising changes in each version(some minor changes may be ommited).
 
-# 0.2.0
+# 0.2
+
+### 0.2.2
+
+- Updated minimum supported Rust version to be the same as `syn` when the `derive` feature is enabled.
+
+- Fixed https://github.com/rust-lang/rust/issues/79813 future compatibility warning.
+
+
+### 0.2.0
 
 - Bumped MSRV to Rust 1.41.0.
 
@@ -46,15 +55,17 @@ to diasble the GetFieldOffset impls. Now the `Self = Foo,` parameter implies `im
 - Added `FieldOffset::identity` constructor
 
 
-# 0.1.2
+# 0.1
+
+### 0.1.2
 
 Changed CI to use github actions, updating readme to reflect that.
 
-# 0.1.1
+### 0.1.1
 
 Worked around compilation error in beta and nighly channels by updating the minimum version for `as_derive_utils` dependency.
 
-# 0.1.0
+### 0.1.0
 
 - Created the `repr_offset` crate and `repr_offset_derive` proc macro crate.
 

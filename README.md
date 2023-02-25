@@ -44,7 +44,8 @@ None for now.
 These are the cargo features in `repr_offset`:
 
 - `derive` (disabled by default): 
-Re-exports the `ReprOffset` derive macro from the `repr_offset_derive` crate.
+Enables the [`ReprOffset`] derive macro.
+This requires the same Rust versions as `syn`, which is currently `>= 1.56.0`.
 
 - `"for_examples"` (disabled by default): 
 Enables the `for_examples` module, with types used in documentation examples.

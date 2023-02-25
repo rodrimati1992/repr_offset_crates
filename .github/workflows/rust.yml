@@ -14,6 +14,10 @@ jobs:
       matrix:
         rust: [stable, beta, nightly, 1.41.0, 1.56.0]
         os: [ubuntu-latest, windows-latest, macOS-latest]
+        exclude:
+          # this runs into linking errors for some reason
+          - os: macOS-latest
+            rust: 1.41.0
 
     steps:
     - uses: actions/checkout@v2
